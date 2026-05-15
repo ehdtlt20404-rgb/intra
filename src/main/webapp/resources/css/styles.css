@@ -1,0 +1,6820 @@
+/* 기관장 실적·성과 관리시스템 — 대시보드 */
+
+:root {
+  --bg-page: #f0f2f5;
+  --bg-panel: #ffffff;
+  --border: #e2e5ea;
+  --text: #1f2937;
+  --text-muted: #5b6472;
+  --accent: #2563eb;
+  --sidebar-active: #0d9488;
+  --sidebar-active-hover: #0f766e;
+  --sidebar-width: 15.5rem;
+  --header-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --radius: 3px;
+  /* 성과지표 카드·입력: 살짝 둥근 모서리·여유 있는 줄간격 */
+  --mi-field-radius: 6px;
+  --font: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-width: 1280px;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--text);
+  background: var(--bg-page);
+  line-height: 1.55;
+}
+
+/* 스크롤은 동작하되 스크롤바는 시각적으로 숨김 (전역) */
+html,
+body {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE 10+ / Edge Legacy */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;                /* Chrome / Safari / Edge */
+}
+
+/* 페이지 내부의 스크롤 컨테이너들도 동일 처리 */
+.app-main,
+.app-body,
+.side-panel,
+.activities-table-wrap,
+.lead-modal,
+.lead-modal__backdrop {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.app-main::-webkit-scrollbar,
+.app-body::-webkit-scrollbar,
+.side-panel::-webkit-scrollbar,
+.activities-table-wrap::-webkit-scrollbar,
+.lead-modal::-webkit-scrollbar,
+.lead-modal__backdrop::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----- 상단(헤더 + nav) ----- */
+/* =============================================
+   NEW LAYOUT — 상단 헤더 + 좌측 사이드바
+   ============================================= */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  /* 문서 body 스크롤 대신 .app-main 내부 스크롤로 동작하게 하여
+     상단 메뉴(.app-top) 와 상세 블루 헤더(.lead-task-header) 가
+     모두 항상 상단에 고정되도록 한다. */
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── 상단 헤더 ──
+   헤더 바 자체는 뷰포트 전체를 채우되, 좌·우 패딩을 (100% - 1500px) / 2 로 잡아
+   헤더 내부 아이템(로고·네비·우측 도구)이 .app-body(max 1500px)와 같은
+   가로 영역 안에서만 배치되도록 한다. 작은 화면에서는 1rem 의 최소 패딩 유지. */
+.app-top {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  padding: 0.55rem max(1rem, calc((100% - 1500px) / 2));
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,.03);
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  height: 130px;
+}
+
+.app-top__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  text-decoration: none;
+  color: var(--text);
+  flex-shrink: 0;
+  /* 좌측 사이드 패널(.side-panel, width:240px)과 가로 시작점을 맞추기 위해
+     로고 브랜드 영역에 동일한 최소 폭을 부여한다. */
+  width: 240px;
+  min-width: 240px;
+  box-sizing: border-box;
+  padding-right: 0.5rem;
+}
+
+.app-top__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+}
+
+.app-top__logo img {
+  display: block;
+  width: 70%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.app-top__title {
+  line-height: 1.2;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #1e3a5f;
+}
+
+.app-top__title small {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+  letter-spacing: 0;
+}
+
+/* 주 메뉴: 텍스트 너비·간격 기준 (균등 100%/n 은 세부과제 탭 .contract-subtabs 전용) */
+.app-top__nav {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5rem;
+  margin-top: 45px;
+}
+
+.app-top__nav-link {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding:30px 20px;
+  line-height: 1.3;
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.app-top__nav-link:hover {
+  color: var(--text);
+}
+
+.app-top__nav-link.is-active {
+  color: #1e3a5f;
+  font-weight: 700;
+  border-bottom-color: #025cac;
+}
+
+.app-top__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  /* 관리자/사용자 토글을 헤더 최상단에 바짝 붙이기 위해
+     align-self 로 끌어올리고 .app-top 의 padding-top 만큼 음수 margin 으로 상쇄 */
+  align-self: flex-start;
+  margin-top: 0;
+}
+
+.app-top__icon-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.app-top__icon-btn:hover {
+  background: #f3f4f6;
+  color: var(--text);
+}
+
+/* ── 본문 영역 (사이드바 + 메인) ──
+   사이드바와 메인 콘텐츠를 한 블록으로 묶어 뷰포트 가운데 정렬한다.
+   최대 폭을 1500px 로 고정하고, 작은 화면에서는 100% 까지 자동 축소된다. */
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+/* ── 좌측 사이드 패널 (짙은 파랑) ── */
+.side-panel {
+  flex: 0 0 240px;
+  width: 240px;
+  background: #025cac;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 0.85rem 1rem;
+  gap: 1rem;
+}
+
+.side-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.side-panel__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.55rem 0.6rem;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.side-panel__section-header:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.side-panel__chev {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  transition: transform 0.2s;
+}
+
+.side-panel__section[aria-expanded="false"] .side-panel__chev {
+  transform: rotate(-90deg);
+}
+
+.side-panel__year-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.side-panel__year-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 3px;
+  font-size: 0.88rem;
+  color: #cbd5e0;
+  text-decoration: none;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+}
+
+.side-panel__year-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.side-panel__year-item.is-active {
+  background: #fff;
+  color: #1e4976;
+  font-weight: 700;
+}
+
+.side-panel__divider {
+  height: 1px;
+  background: rgba(255,255,255,0.15);
+  margin: 0.25rem 0.3rem;
+}
+
+.side-panel__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.side-panel__link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 3px;
+  font-size: 0.88rem;
+  color: #cbd5e0;
+  text-decoration: none;
+}
+
+.side-panel__link:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.side-panel__footer {
+  margin-top: auto;
+  padding: 0.75rem 0.75rem 0;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.55;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+/* ── 메인 영역 ── */
+.app-main {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-page);
+  /* 세로 스크롤을 이 영역에서 처리하여 상단 .app-top 이 항상 보이고,
+     내부 sticky (.lead-task-header) 가 정상적으로 동작하게 한다. */
+  overflow: auto;
+}
+
+/* ── 좌측 사이드 패널: 전체 페이지에 노출, 좌측정렬 레이아웃 ── */
+.side-panel {
+  display: flex;
+}
+
+/* ── 관리자 / 사용자 역할 토글 ── */
+.role-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.role-btn {
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.18rem 0.6rem;
+  border: none;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1.3;
+}
+
+.role-btn + .role-btn {
+  border-left: 1px solid var(--border);
+}
+
+.role-btn--active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.role-btn:not(.role-btn--active):hover {
+  background: #f3f4f6;
+}
+
+/* ── admin-only: 사용자 모드에서만 숨김 (관리자 모드에서는 display 를 건드리지 않아
+     .mi-card / .mi-section 등 flex+gap 레이아웃이 유지된다) ── */
+body:not(.is-admin) .admin-only {
+  display: none !important;
+}
+
+/* ── 사용자 모드: 관리자 전용 페이지의 입력/편집 UI를 읽기 전용으로 잠금 ──
+   - 활동등록(activity-register.html)은 제외되어야 하므로, 해당 페이지에서는
+     본 규칙이 타겟으로 삼지 않는 컨테이너(.act-reg-*)를 사용한다.
+   - 리더십 상세(.lead-task-panel), 성과지표 상세(.mi-page),
+     리더십 목록의 범주 추가 헤더(.lead-page-header),
+     리더십 활동실적/경영계약 달성계획 모달(.lead-modal, .plan-act-*)
+     내부의 입력 요소를 잠근다.
+*/
+body:not(.is-admin) .lead-task-panel input:not([type="button"]):not([type="submit"]),
+body:not(.is-admin) .lead-task-panel textarea,
+body:not(.is-admin) .lead-task-panel select,
+body:not(.is-admin) .mi-page input:not([type="button"]):not([type="submit"]),
+body:not(.is-admin) .mi-page textarea,
+body:not(.is-admin) .mi-page select,
+/* 활동실적 모달은 "기존 항목 보기" 모드(.is-view-mode) 에서만 잠그고,
+   "신규 등록" 모드에서는 사용자도 직접 입력할 수 있어야 한다. */
+body:not(.is-admin) .lead-modal.is-view-mode input:not([type="button"]):not([type="submit"]):not([type="file"]),
+body:not(.is-admin) .lead-modal.is-view-mode textarea,
+body:not(.is-admin) .lead-modal.is-view-mode select {
+  /* 관리자 전용 페이지의 폼을 사용자 모드에서 읽기 전용으로 잠그되,
+     관리자 모드와 시각적 차이가 거의 없도록 배경/색상은 기본값을 그대로 둔다.
+     (잠금은 pointer-events 로만 처리) */
+  pointer-events: none;
+  cursor: default;
+}
+
+/* 포커스·빈 placeholder 만 살짝 눈에 띄지 않도록 */
+body:not(.is-admin) .lead-task-panel input:focus,
+body:not(.is-admin) .lead-task-panel textarea:focus,
+body:not(.is-admin) .lead-task-panel select:focus,
+body:not(.is-admin) .mi-page input:focus,
+body:not(.is-admin) .mi-page textarea:focus,
+body:not(.is-admin) .mi-page select:focus,
+body:not(.is-admin) .lead-modal.is-view-mode input:focus,
+body:not(.is-admin) .lead-modal.is-view-mode textarea:focus,
+body:not(.is-admin) .lead-modal.is-view-mode select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 사용자 모드: 모든 input/textarea 의 placeholder 는 컨텐츠처럼 오해될 수 있어
+   화면에 노출되지 않도록 전역적으로 투명 처리한다.
+   (DOM 의 placeholder 속성 자체는 유지되어 관리자 모드 전환 시 즉시 다시 보임) */
+body:not(.is-admin) input::placeholder,
+body:not(.is-admin) textarea::placeholder {
+  color: transparent !important;
+  opacity: 0 !important;
+}
+
+/* 전역: placeholder 의 폰트 사이즈를 input/textarea 본문 텍스트와 동일하게 */
+input::placeholder,
+textarea::placeholder {
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+/* 활동유형 그리드(버튼형) 역시 비활성화 (중점과제 활동 모달) —
+   신규 등록 모드에서는 유형 선택이 가능해야 하므로 view-mode 에서만 잠근다. */
+body:not(.is-admin) .lead-modal.is-view-mode .lead-act-modal__type-grid,
+body:not(.is-admin) .lead-modal.is-view-mode .act-reg__type-grid {
+  pointer-events: none;
+}
+
+/* 성과지표 상세 페이지/모달의 유형 토글 버튼도 잠금 */
+body:not(.is-admin) .mi-page .mi-type-group,
+body:not(.is-admin) .mi-modal .mi-type-group {
+  pointer-events: none;
+}
+
+/* 사용자 모드: 유형 토글은 "선택된 값"만 보여주기(읽기 전용 배지처럼) */
+body:not(.is-admin) .mi-page .mi-type-btn:not(.is-active),
+body:not(.is-admin) .mi-modal .mi-type-btn:not(.is-active) {
+  display: none;
+}
+
+/* 유형 토글 — 붙어 있는 2칸 세그먼트(컴팩트) */
+.mi-type-group {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 0 0 auto;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--mi-field-radius);
+  overflow: hidden;
+  background: #fff;
+}
+
+.mi-type-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  color: #374151;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem .7rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.45;
+  flex: 0 0 auto;
+  min-width: 4rem;
+  min-height: 2rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mi-type-btn:last-child {
+  border-right: none;
+}
+
+.mi-type-btn:hover {
+  background: #f8fafc;
+  color: #111827;
+}
+
+.mi-type-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
+  position: relative;
+  z-index: 1;
+}
+
+.mi-type-btn.is-active:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 좌측 사이드 패널이 노출되는 레이아웃:
+   .app-body 가 이미 70% 폭으로 가운데 정렬되어 있으므로,
+   내부 .page 는 메인 영역 전체를 채운다. */
+.app-main .page {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  padding: 1.25rem 1.5rem 2rem;
+}
+.app-main .page.page--dashboard {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+}
+
+/* ----- 관리자: ��주 추가 ----- */
+.page--admin,
+.page--admin-category {
+  gap: 1.25rem;
+}
+
+.admin-back {
+  margin: 0 0 0.25rem;
+}
+
+.admin-back__link {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.admin-back__link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.admin-home-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.admin-home-lead {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.admin-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 32rem;
+}
+
+.admin-menu-card {
+  display: block;
+  padding: 1rem 1.15rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-menu-card:hover {
+  border-color: var(--sidebar-active);
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.12);
+}
+
+.admin-menu-card__title {
+  display: block;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.admin-menu-card__desc {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.admin-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  padding: 1.25rem 1.35rem 1.35rem;
+}
+
+.admin-card + .admin-card {
+  margin-top: 1.5rem;
+}
+
+/* 데이터 백업·복원 카드 */
+.admin-backup__intro {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  background: #f8fafc;
+  border: 1px dashed var(--border);
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.admin-backup__intro code {
+  background: rgba(15, 23, 42, 0.06);
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.admin-backup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.6rem;
+}
+
+/* file input 을 label 로 감싼 의사-버튼 */
+.admin-backup__import-btn {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.admin-save-status.is-error {
+  color: #dc2626;
+}
+
+.admin-card__titlebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.admin-card__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-new-category-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.admin-input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fafbfc;
+  color: var(--text);
+}
+
+.admin-input::placeholder {
+  color: #9ca3af;
+}
+
+.admin-input:focus-visible {
+  outline: none;
+  background: var(--bg-panel);
+}
+
+.btn--admin-teal {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.95rem;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #333;
+  background: #fff;
+}
+
+.btn--admin-teal:hover {
+  background: #f0f2f5;
+  border: 1px solid #d1d5db;
+  color: #333;
+}
+
+.btn--admin-teal:focus-visible {
+  outline: 2px solid #00897b;
+  outline-offset: 2px;
+}
+
+.admin-section-heading {
+  margin: 0.5rem 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.admin-category-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-category-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+}
+
+.admin-category-item__num {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: #00897b;
+}
+
+.admin-category-item__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text);
+  /* when rendered as <input> */
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.admin-category-item__title:hover {
+  border-color: var(--border);
+  background: #fff;
+}
+
+.admin-category-item__title:focus {
+  border-color: var(--accent);
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.admin-category-item__badge {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: #f3f4f6;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+
+.admin-category-item__delete {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.admin-category-item__delete:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.admin-category-item__delete:focus-visible {
+  outline: 2px solid #9ca3af;
+  outline-offset: 1px;
+}
+
+
+.app-top {
+  background: var(--bg-panel);
+  box-shadow: var(--header-shadow);
+}
+
+.app-header {
+  background: transparent;
+}
+
+.app-header__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem 0;
+}
+
+.app-header__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.main-nav {
+  border-top: 1px solid var(--border);
+}
+
+.main-nav__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* 일반 가로 메뉴: ul + li + a */
+.main-nav__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.main-nav__item {
+  display: flex;
+}
+
+.main-nav__link {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+  padding: 0.7rem 0.95rem 0.55rem;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.main-nav__link:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.main-nav__link.is-active {
+  color: var(--accent);
+  font-weight: 700;
+  border-bottom-color: var(--accent);
+}
+
+.main-nav__link.is-active:hover {
+  background: transparent;
+}
+
+.app-header__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ----- 본문 ----- */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.panel__title {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ----- 현황 요약 카드 ----- */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+
+.summary-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.35rem 1rem;
+  text-align: center;
+  background: #fafbfc;
+}
+
+.summary-card__value {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  letter-spacing: -0.03em;
+}
+
+.summary-card__label {
+  margin: 0.6rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ----- PDCA ----- */
+.pdca-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+
+.pdca-step {
+  border-radius: var(--radius);
+  padding: 1rem 1rem 1.1rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.pdca-step__tag {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-bottom: 0.35rem;
+}
+
+.pdca-step__text {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pdca-step--plan {
+  background: #dbeafe;
+}
+
+.pdca-step--do {
+  background: #d1fae5;
+}
+
+.pdca-step--check {
+  background: #fef3c7;
+}
+
+.pdca-step--action {
+  background: #fce7f3;
+}
+
+/* ----- 역할 3단 ----- */
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+
+.role-col__title {
+  margin: 0 0 0.65rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--accent);
+}
+
+.role-col__list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.role-col__list li {
+  margin: 0.4rem 0;
+}
+
+/* ----- 일정 테이블 ----- */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.data-table th {
+  background: #f3f4f6;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover td {
+  background: #fafbfc;
+}
+
+.data-table td:first-child {
+  white-space: nowrap;
+  color: var(--text-muted);
+  width: 6rem;
+}
+
+.data-table td:last-child {
+  white-space: nowrap;
+  color: var(--text-muted);
+  width: 7rem;
+}
+
+/* ----- 리더십 범주 ----- */
+.page--leadership {
+  /* 범주 헤더 카드 + 번호별 섹션 카드 사이에 충분한 여백을 두어
+     시각적으로 섹션 구분이 명확히 드러나도록 함 */
+  gap: 0.3rem;
+}
+
+/* 리더십 목록 전체를 감싸는 흰색 패널 — 성과지표 상세(.lead-task-panel.mi-page)와
+   동일한 톤으로 처리해 페이지 간 시각적 일관성을 맞춘다. */
+.lead-page-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* 리더십 범주 페이지 헤더 카드 */
+.lead-page-header {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+    margin-bottom: 20px;
+}
+
+.lead-page-header__title {
+  flex: 1 1 auto;
+  margin: 0 0 10px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.lead-page-header__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lead-page-header__toolbar .btn {
+  font-size: 0.88rem;
+}
+
+.lead-page-header__input-row {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.lead-page-header__input-row .admin-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.lead-page-header__input-row .lead-page-header__dept-input {
+  flex: 0 0 150px;
+  width: 150px;
+  min-width: 150px;
+}
+
+.lead-page-header__btn-row {
+  flex: 0 0 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+/* 빈 상태 */
+.lead-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+.lead-empty-state__msg {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+/* 범주 추가 버튼 영역 */
+.lead-add-cat-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.85rem 0 0.5rem;
+}
+
+.lead-add-cat-btn {
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  border-radius: 3px;
+  border: 1px dashed #0d9488;
+  background: transparent;
+  color: #0d9488;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.lead-add-cat-btn:hover {
+  background: #f0fdfa;
+}
+
+.lead-add-cat-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.lead-add-cat-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.lead-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.lead-block__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.5rem;
+  padding: 0.95rem 1.25rem;
+  background: #fafbfc;
+  border-bottom: 1px solid var(--border);
+}
+
+.lead-block__num {
+     width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1.4rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.lead-block__title {
+  margin: 0;
+  flex: 1;
+  min-width: 12rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.lead-block__meta {
+    margin-left: auto;
+    font-size: 1rem;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.lead-block__head .lead-block__del-btn,
+button.lead-block__del-btn {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #6b7280;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.lead-block__del-btn .icon-trash {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  margin: auto;
+  vertical-align: middle;
+}
+
+.lead-block__del-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0;
+}
+
+.task-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s ease;
+}
+
+.task-list li:last-child .task-row,
+.task-list li:has(+ .task-list__add-keytask) .task-row {
+  border-bottom: 0;
+}
+
+.task-row:hover {
+  background: #f9fafb;
+}
+
+.task-row__name {
+  flex: 1;
+  min-width: min(100%, 14rem);
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
+.task-row__name-num {
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 1.25rem;
+  font-size: 0.9rem;
+
+}
+
+.task-row__name-title {
+  color: var(--text);
+}
+
+.task-row__aside {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+/* 중점과제 행 내부의 활동실적 필: plans-item 에서의 margin-right: auto 는 여기선 필요 없음 */
+.task-row__aside .task-row__act-count {
+  margin-right: 0;
+}
+
+/* 중점과제 행 내부의 "+ 활동실적" 버튼: aside 가 이미 flex-end 이므로
+   기본 margin-left: auto 를 제거해 actCount 버튼과 분리되지 않도록 한다. */
+.task-row__aside .task-row__act-add {
+  margin-left: 0;
+}
+
+.task-row__dept {
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  max-width: 10rem;
+  text-align: right;
+}
+
+.task-row__dept:empty {
+  display: none;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.badge--progress {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.badge--empty {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.task-row__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.task-row__chevron::before {
+  content: "›";
+  font-weight: 700;
+}
+
+button.task-row--accordion {
+  width: 100%;
+  font: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+button.task-row--accordion:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.task-row--static {
+  cursor: default;
+}
+
+.task-row--static:hover {
+  background: transparent;
+}
+
+.task-list__accordion-item.is-expanded .task-row__chevron::before {
+  display: inline-block;
+  transform: rotate(90deg);
+}
+
+/* Expanded accordion: highlight only the key-task row (not the detail panel). */
+.task-list__accordion-item.is-expanded .task-row--accordion {
+  position: relative;
+  background: rgba(37, 99, 235, 0.07);
+  border-bottom-color: #dbeafe;
+}
+
+.task-list__accordion-item.is-expanded .task-row--accordion::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+  border-radius: 0 3px 3px 0;
+  pointer-events: none;
+}
+
+.task-list__accordion-item.is-expanded .task-row__name {
+  font-weight: 600;
+  color: #1e3a5f;
+}
+
+.task-list__accordion-item.is-expanded .task-row__chevron {
+  color: var(--accent);
+}
+
+.task-accordion-panel {
+  padding: 0;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
+
+.task-accordion-panel__placeholder {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* =============================================
+   중점과제 행: 링크(페이지 이동) 형태
+   ============================================= */
+a.task-row--link {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+a.task-row--link:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+a.task-row--link:hover .task-row__chevron {
+  color: var(--accent);
+  transform: translateX(2px);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+a.task-row--link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* =============================================
+   leadership-task.html — 중점과제 상세 페이지
+   ============================================= */
+.page--leadership-task {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.lead-task-crumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.lead-task-crumb__back {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.lead-task-crumb__back:hover {
+  text-decoration: underline;
+}
+
+.lead-task-crumb__sep {
+  color: #cbd5e1;
+}
+
+.lead-task-crumb__cat {
+  color: var(--text);
+}
+
+.lead-task-crumb__task {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.lead-task-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  background: linear-gradient(90deg, #1e3a5f 0%, #2563eb 100%);
+  color: #fff;
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 2px 6px rgba(30, 58, 95, 0.15);
+}
+
+.lead-task-header__name {
+  display: flex;
+  align-items: baseline;
+  gap: 1.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.lead-task-header__num {
+  font-weight: 700;
+  font-size: 0.95rem;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.lead-task-header__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lead-task-header__aside {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.lead-task-header__dept {
+  font-size: 0.88rem;
+  padding: 0.2rem 0.6rem;
+  font-weight:700;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.lead-task-header .badge {
+  background: #fff;
+}
+
+/* 헤더 내 활동실적 필: plans-item 의 margin-right: auto 는 여기선 필요 없음 */
+.lead-task-header__aside .lead-task-header__act-count {
+  margin-right: 0;
+}
+
+/* 블루 헤더 내부 "+ 활동실적" 등록 버튼 — 어두운 배경에 대비되는 흰색 pill */
+.lead-task-header__act-add {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.9rem;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: #fff;
+  color: #1e3a5f;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.lead-task-header__act-add:hover,
+.lead-task-header__act-add:focus-visible {
+  background: #f3f4f6;
+  color: #1d4ed8;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+
+.lead-task-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lead-task-panel .lead-detail {
+  background: #fff;
+}
+
+/* =============================================
+   리더십 중점과제 상세 패널 (개선된 레이아웃)
+   ============================================= */
+.lead-detail {
+  padding: 1rem 1.25rem 1.15rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+}
+
+.lead-detail__form {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lead-detail__row {
+  display: grid;
+  grid-template-columns: 13.5rem 1fr;
+  border-top: 1px solid var(--border);
+  min-height: 2.6rem;
+}
+
+.lead-detail__row:first-child {
+  border-top: none;
+}
+
+.lead-detail__label {
+  background: #f3f4f6;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-right: 1px solid var(--border);
+  white-space: pre-line;
+  line-height: 1.35;
+}
+
+.lead-detail__body {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lead-detail__body--split {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.lead-detail__input {
+  font: inherit;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text);
+  box-sizing: border-box;
+  font-size: .85rem;
+}
+
+.lead-detail__input--grow {
+  flex: 1;
+}
+
+.lead-detail__input:focus,
+.lead-detail__textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.lead-detail__textarea {
+  font: inherit;
+  font-size: 0.85rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text);
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+  min-height: 2.2rem;
+}
+
+/* 추진 배경(환경·성과분석 / 기관장 인식): 보이는 입력 높이를 2줄로 고정 */
+.lead-detail__textarea.lead-detail__textarea--two-line {
+  --lead-ta-two-pad-y: calc(0.45rem * 2);
+  --lead-ta-two-lines: calc(2 * 1.5 * 0.85rem);
+  --lead-ta-two-border: 2px;
+  min-height: 0;
+  height: calc(
+    var(--lead-ta-two-border) + var(--lead-ta-two-pad-y) + var(--lead-ta-two-lines)
+  );
+  max-height: calc(
+    var(--lead-ta-two-border) + var(--lead-ta-two-pad-y) + var(--lead-ta-two-lines)
+  );
+  resize: none;
+  overflow-y: auto;
+}
+
+.lead-detail__dept-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding-left: 0.75rem;
+  border-left: 1px dashed #d1d5db;
+}
+
+.lead-detail__dept-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.lead-detail__input--dept {
+  width: 9rem;
+}
+
+/* 중첩된 상위 라벨 + 서브행들 (+ 달성방안 추가 한 줄 유지, nowrap 과 함께 적당히만 여유) */
+.lead-detail__row--nested {
+  grid-template-columns: 9rem 1fr;
+}
+
+.lead-detail__row--nested .lead-detail__label {
+  background: #f3f4f6;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-top: 0.7rem;
+}
+
+.lead-detail__nested {
+  display: flex;
+  flex-direction: column;
+}
+
+.lead-detail__subrow {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  border-top: 1px solid var(--border);
+  min-height: 2.4rem;
+}
+
+.lead-detail__subrow:first-child {
+  border-top: none;
+}
+
+.lead-detail__sublabel {
+  background: #f3f4f6;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-right: 1px solid var(--border);
+  white-space: pre-line;
+  line-height: 1.3;
+}
+
+/* ── 실적 입력 카드 ── */
+.lead-detail__results {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lead-detail__results-head {
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
+
+.lead-detail__results-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.lead-detail__results-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.lead-detail__results-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lead-detail__results-add {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.75rem;
+}
+
+/* =============================================
+   향후일정 리스트
+   ============================================= */
+.lead-detail__schedule {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 활동유형: 1차 select + 2차 체크박스 */
+.lead-detail__acttype {
+  flex: 1 1 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lead-detail__acttype .form-field--inline {
+  margin: 0;
+}
+
+.lead-detail__acttype .form-select {
+  background-color: #fff;
+}
+
+.lead-detail__label--stack {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  padding-top: 0.85rem;
+}
+
+.lead-detail__label-text {
+  display: block;
+}
+
+.lead-detail__schedule-add {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.2rem 0.55rem;
+  width: auto;
+  max-width: none;
+  border: 1px solid #111;
+  border-radius: 3px;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.lead-detail__schedule-add:hover {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
+.lead-detail__schedule-add:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 달성방안 여러 세트: 추진배경과 같은 nested 열 안에 서브행만 이어 붙임(바깥 body 래퍼 없음) */
+.plan-detail__methods-nested {
+  min-width: 0;
+}
+
+/* 목표 달성계획 / 리더십 중점과제: 단순 행 —
+   라벨 칸 = 중첩 행의 (왼쪽 타이틀 9rem + 서브라벨 5.5rem) 합친 폭,
+   본문 = 활동유형 등과 동일한 입력 열(1fr) */
+.lead-detail__form > .lead-detail__row.plan-detail__row--simple,
+.lead-detail__form > .lead-detail__row.lead-detail__row--keytask-simple {
+  grid-template-columns: calc(9rem + 5.5rem) minmax(0, 1fr);
+}
+
+.lead-detail__form > .lead-detail__row.plan-detail__row--simple > .lead-detail__body,
+.lead-detail__form > .lead-detail__row.lead-detail__row--keytask-simple > .lead-detail__body {
+  min-width: 0;
+}
+
+.lead-detail__subrow--method-set-start {
+  border-top: 1px dashed #d1d5db;
+}
+
+.lead-detail__subrow--method-toolbar {
+  border-top: 1px solid var(--border);
+  min-height: 0;
+  /* 타이틀/서브라벨 열과 같은 톤으로 한 세트 하단 마감 느낌 */
+  background: #f3f4f6;
+}
+
+.plan-detail__method-toolbar-full {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  box-sizing: border-box;
+}
+
+.plan-method-block__remove {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+}
+
+/* 달성방안 추가: 라벨 칩 너비 안에서도 레이블 줄바꿈 방지 */
+.plan-method-add-btn {
+  white-space: nowrap;
+}
+
+.plan-detail__method-block-row .plan-method-block__number,
+.lead-detail__activity-plan-block-row .plan-method-block__number {
+  font-weight: 800;
+  font-size: 1em;
+}
+
+.lead-detail__schedule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lead-detail__schedule-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.lead-detail__schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.87rem;
+}
+
+.lead-detail__schedule-item:last-child {
+  border-bottom: 0;
+}
+
+.lead-detail__schedule-tag {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.85rem;
+  min-width: 5.5rem;
+}
+
+.lead-detail__schedule-text {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0.15rem 0.25rem;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 3px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.lead-detail__schedule-text:hover {
+  background: #f3f4f6;
+}
+
+.lead-detail__schedule-text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 사용자 모드에서는 향후일정 항목 클릭으로 수정 모달이 열리지 않도록 잠근다.
+   (관리자 모드 전환 시 즉시 다시 클릭 가능) */
+body:not(.is-admin) .lead-detail__schedule-text {
+  cursor: default;
+  pointer-events: none;
+}
+body:not(.is-admin) .lead-detail__schedule-text:hover {
+  background: transparent;
+}
+
+.lead-detail__schedule-del {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lead-detail__schedule-del:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* =============================================
+   공용 모달 (향후일정 작성 등)
+   ============================================= */
+.lead-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: lead-modal-fade-in 0.15s ease-out;
+}
+
+/* display:flex 가 브라우저 기본 [hidden] { display:none } 을 덮어쓰는 것을 방지 */
+.lead-modal__backdrop[hidden] {
+  display: none !important;
+}
+
+@keyframes lead-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lead-modal {
+  width: min(480px, 92vw);
+  background: #fff;
+  border-radius: 3px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  animation: lead-modal-scale-in 0.18s ease-out;
+}
+
+@keyframes lead-modal-scale-in {
+  from { transform: translateY(8px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0)   scale(1);    opacity: 1; }
+}
+
+.lead-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, #1e3a5f 0%, #2563eb 100%);
+  color: #fff;
+  border-radius: 3px 3px 0 0;
+}
+
+.lead-modal__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.lead-modal__x {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.lead-modal__x:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.lead-modal__body {
+  padding: 1.1rem 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.lead-modal__row {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lead-modal__row--full {
+  grid-template-columns: 5rem 1fr;
+  align-items: flex-start;
+}
+
+.lead-modal__label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lead-modal__input {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.lead-modal__input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.lead-modal__input--textarea {
+  resize: vertical;
+  min-height: 5.5rem;
+  line-height: 1.5;
+}
+
+.lead-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem 1rem;
+  border-top: 1px solid var(--border);
+  background: #fafbfc;
+  border-radius: 0 0 3px 3px;
+}
+
+.lead-modal__foot-del {
+  margin-right: auto;
+}
+
+.btn--danger {
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.btn--danger:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.btn--danger:focus-visible {
+  outline: 2px solid #9ca3af;
+  outline-offset: 2px;
+}
+
+/* =============================================
+   활동 실적 모달 (넓은 레이아웃)
+   ============================================= */
+.lead-modal--wide {
+  width: min(880px, 94vw);
+}
+
+.lead-modal__body--activity {
+  gap: 1rem;
+}
+
+.lead-act-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lead-act-modal__field--full {
+  grid-column: 1 / -1;
+}
+
+.lead-act-modal__label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lead-act-modal__req {
+  color: #dc2626;
+}
+
+.lead-act-modal__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* 5열 활동유형 피커 */
+.lead-act-modal__type-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.55rem;
+  background: #fafbfc;
+}
+
+.lead-act-modal__type-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.45rem 0.4rem;
+  background: #fff;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.lead-act-modal__type-col.is-active {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.lead-act-modal__type-col.is-dim {
+  opacity: 0.45;
+}
+
+.lead-act-modal__type-head {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.3rem 0.25rem;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.lead-act-modal__type-col.is-active .lead-act-modal__type-head {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.lead-act-modal__type-head:hover {
+  background: #e5e7eb;
+}
+
+.lead-act-modal__type-col.is-active .lead-act-modal__type-head:hover {
+  background: #1d4ed8;
+}
+
+.lead-act-modal__type-sub {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--text);
+  padding: 0.2rem 0.1rem;
+  cursor: pointer;
+}
+
+.lead-act-modal__type-sub input[type="checkbox"] {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-top: 0.1rem;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.lead-act-modal__type-sub input:disabled {
+  cursor: not-allowed;
+}
+
+.lead-act-modal__type-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.lead-act-modal__type-hint.is-ok {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* 첨부파일 영역 (이전: 증빙 파일 첨부) */
+.lead-act-modal__proof-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  /* 뷰 모드(링크 1줄) ↔ 수정 모드(텍스트 입력 + 파일 선택 2줄) 전환 시
+     모달 전체 높이가 바뀌어 위/아래로 튀어 보이는 현상을 방지하기 위해
+     편집 모드 기준 높이를 미리 확보한다. */
+  min-height: 4.5rem;
+}
+
+.lead-act-modal__proof-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lead-act-modal__proof-file {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* 뷰모드 전용 첨부파일 링크 */
+.lead-act-modal__proof-link {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--accent, #2563eb);
+  text-decoration: underline;
+  word-break: break-all;
+  padding: 0.35rem 0;
+}
+
+.lead-act-modal__proof-link.is-empty {
+  color: var(--text-muted, #9ca3af);
+  text-decoration: none;
+  font-style: italic;
+}
+
+/* 목록 행의 첨부파일 셀 — 첨부 여부를 SVG 문서 아이콘으로 표시.
+   첨부 없음일 때는 빈 셀로 두어 시각적 잡음을 줄인다. */
+.lead-detail__results-cell-proof {
+  text-align: center;
+  color: #1f2937;
+}
+
+.lead-detail__results-cell-proof .icon-proof {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 실적 목록 테이블 — 읽기 전용 행 */
+.lead-detail__results-row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.lead-detail__results-row:hover {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.lead-detail__results-cell-ro {
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 20rem;
+}
+
+.lead-detail__results-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.lead-detail__results-tbl thead th {
+  background: #f3f4f6;
+  padding: 0.55rem 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.lead-detail__results-tbl tbody td {
+  padding: 0.7rem 0.5rem;
+  line-height: 1.7;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+/* ==========================================================
+   결과 리스트(활동실적 목록 등) 페이지네이션
+   ========================================================== */
+.result-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 1rem 0 0.25rem;
+  flex-wrap: wrap;
+}
+
+.result-pagination:empty {
+  display: none;
+}
+
+.result-pagination__btn {
+  appearance: none;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.55rem;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  color: #333;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.result-pagination__btn:hover:not(.is-disabled):not(.is-active) {
+  background: #f0f2f5;
+  border-color: #d1d5db;
+  color: #333;
+}
+
+.result-pagination__btn.is-active {
+  background: #1f2937;
+  border-color: #1f2937;
+  color: #fff;
+  cursor: default;
+}
+
+.result-pagination__btn.is-disabled,
+.result-pagination__btn:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+  background: #fff;
+}
+
+.result-pagination__btn--nav {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.result-pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.lead-detail__results-cell {
+  font: inherit;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.lead-detail__results-cell:hover {
+  background: #f9fafb;
+}
+
+.lead-detail__results-cell:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.lead-detail__results-empty td {
+  text-align: center;
+  padding: 1.2rem 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.lead-detail__results-del {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.lead-detail__results-del:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ── 하단 액션 ── */
+.lead-detail__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.lead-detail__actions--inline {
+  margin:0 0 1.25rem;
+  padding: 0.75rem 0 0;
+}
+
+/* "+ 활동실적" 추가 버튼 — 액션바의 좌측 끝에 배치되도록 우측 마진을 auto 로
+   밀어 다른 버튼(목록보기 / 임시 저장 / 저장)들은 우측 정렬을 유지한다. */
+.lead-detail__act-add {
+  margin-right: auto;
+}
+
+.lead-detail__saved {
+  margin-right: auto;
+  font-size: 0.85rem;
+  color: #059669;
+  font-weight: 600;
+}
+
+.lead-task-detail {
+  max-width: 100%;
+}
+
+.lead-task-detail__section {
+  margin-bottom: 1rem;
+}
+
+.lead-task-detail__label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.lead-task-detail__slabel {
+  margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lead-task-detail__input,
+.lead-task-detail__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font: inherit;
+  background: #fff;
+}
+
+.lead-task-detail__textarea {
+  resize: vertical;
+  min-height: 3.5rem;
+  line-height: 1.45;
+}
+
+.lead-task-detail__three-col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+
+.lead-schedule-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lead-schedule-tbl th,
+.lead-schedule-tbl td {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.45rem;
+  vertical-align: top;
+}
+
+.lead-schedule-tbl thead th {
+  padding: 0.45rem;
+  font-weight: 700;
+  text-align: center;
+  background: #e8f4fc;
+}
+
+.lead-schedule-tbl__month {
+  width: 3.25rem;
+  text-align: center;
+  white-space: nowrap;
+  background: #f0f9ff;
+}
+
+.lead-schedule-tbl__cell {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.5rem;
+  padding: 0.35rem;
+  border: none;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.4;
+  background: transparent;
+}
+
+.lead-task-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.lead-task-detail__saved {
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: #059669;
+}
+
+.task-row--add-slot {
+  cursor: default;
+}
+
+.task-row--add-slot:hover {
+  background: transparent;
+}
+
+.task-row__name--muted {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.btn--keytask-add {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  background: #fff;
+  color: #333;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.btn--keytask-add:hover {
+  background: #f0f2f5;
+  border-color: #d1d5db;
+  color: #333;
+}
+
+.btn--keytask-add:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.lead-keytask-panel {
+  padding: 0.9rem 1.25rem 1.1rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  margin-top: 0.5rem;
+}
+
+/* 카드 바깥 "중점과제 추가" 영역 — 직전 lead-block 카드와의 간격을 조정 */
+.lead-block__add-wrap {
+  display: block;
+  width: 100%;
+  text-align: right;
+  margin: -0.5rem 0 0;
+}
+
+.lead-block__add-wrap .btn--keytask-add {
+  display: inline-block;
+  width: auto;
+  float: none;
+}
+
+.lead-block__add-wrap .lead-keytask-panel {
+  width: 100%;
+  text-align: left;
+  margin-top: 0.5rem;
+  box-sizing: border-box;
+}
+
+.lead-block__add-wrap .lead-keytask-panel[hidden] {
+  display: none;
+}
+
+.lead-keytask-panel__grid {
+  display: grid;
+  gap: 0.65rem 1rem;
+  grid-template-columns: 1fr minmax(8rem, 14rem);
+  margin-bottom: 0.75rem;
+}
+
+/* 담당 부서 입력이 없는 단일 필드(중점과제 제목만) 레이아웃 */
+.lead-keytask-panel__grid--single {
+  grid-template-columns: 1fr;
+}
+
+
+.lead-keytask-panel__label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.lead-keytask-panel__input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+}
+
+.lead-keytask-panel__input:focus-visible {
+  outline: none;
+}
+
+.lead-keytask-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lead-keytask-panel__actions .btn {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+}
+
+/* ----- 경영계약 이행성과 ----- */
+.page--contract {
+  gap: 0;
+}
+
+.contract-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.page-intro {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* 경영계약 이행성과 인트로 줄: 안내 문구(좌) + 활동 등록 버튼(우) 정렬.
+   한 줄에 안내와 빠른 진입 버튼을 함께 두어 접근성을 높인다. */
+.contract-panel__intro-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.contract-panel__intro-row .page-intro {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+
+.contract-panel__intro-row .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* 리더십 페이지 상단 인라인 툴바 — 헤더 카드 위에 덜 무겁게 올려놓는 변형 */
+.activities-toolbar--inline {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.contract-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-panel);
+}
+
+.contract-table {
+  width: 100%;
+  min-width: 52rem;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.contract-table thead th {
+  padding: 0.7rem 0.85rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text);
+  background: #fafbfc;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.contract-table thead th.contract-table__col-narrow,
+.contract-table thead th.contract-table__chevron-head {
+  text-align: center;
+}
+
+.contract-table__chevron-head {
+  width: 2.25rem;
+}
+
+.contract-table tbody td {
+  padding: 0.72rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.contract-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.contract-table__row {
+  cursor: default;
+}
+
+/* 성과지표 셀에만 링크처럼 hover 효과를 적용 (행 전체가 아닌 지표 텍스트 셀만) */
+.contract-table__row .contract-table__indicator {
+  cursor: pointer;
+}
+
+.contract-table__row.row-hover .contract-table__indicator {
+  background: #f0f9ff;
+}
+
+/* 성과목표 셀 단독 hover */
+td.contract-table__goal.goal-hover {
+  background: #f0fdf4;
+}
+
+.contract-table__row .contract-table__indicator:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.contract-table__goal {
+  font-weight: 600;
+  color: var(--text);
+  vertical-align: middle;
+  text-align: center;
+  width: 19%;
+  min-width: 11rem;
+  line-height: 1.45;
+}
+
+/* rowspan 으로 여러 성과지표 행에 걸칠 때도 셀 내부는 상하 중앙 정렬 유지 */
+.contract-table__goal[rowspan] {
+  vertical-align: middle;
+}
+
+.contract-table__indicator {
+  text-align: left;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.contract-table__center {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.contract-table__muted {
+  color: var(--text-muted);
+}
+
+.contract-table__chevron {
+  text-align: center;
+  width: 1rem;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.contract-table__chevron::after {
+  content: "›";
+  font-weight: 700;
+}
+
+.contract-table__col-narrow {
+  width: 5.5rem;
+}
+
+.contract-table-wrap--perf {
+  overflow-x: auto;
+}
+
+.contract-table--perf {
+  min-width: 38rem;
+}
+
+.contract-table__col-type {
+  width: 9rem;
+  text-align: center;
+}
+
+.contract-table__col-target {
+  width: 16rem;
+  text-align: center;
+}
+
+.contract-table--perf .contract-table__goal {
+  width: 28%;
+  min-width: 14rem;
+}
+
+/* 컬럼 경계 세로 구분선
+   (헤더와 본문 셀 모두 좌우 세로 라인을 넣어
+    모든 컬럼(성과목표 / 성과지표 / 유형 / 목표치) 경계를 뚜렷하게 한다.
+    rowspan 으로 병합된 성과목표 셀에도 자연스럽게 세로선이 이어진다.) */
+.contract-table--perf thead th,
+.contract-table--perf tbody td {
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+/* 바깥쪽(좌/우 끝) 테두리는 테이블 가장자리와 겹치지 않도록 제거 */
+.contract-table--perf thead th:first-child,
+.contract-table--perf tbody td:first-child {
+  border-left: none;
+}
+.contract-table--perf thead th:last-child,
+.contract-table--perf tbody td:last-child {
+  border-right: none;
+}
+
+.contract-table__target {
+  font-size: 0.88rem;
+}
+
+.contract-table__row--open td {
+  background: #f0f9ff;
+}
+
+.contract-table__row--inno.contract-table__row--open td {
+  background: #eef2ff;
+}
+
+.contract-table__chevron--lead {
+  display: inline-block;
+}
+
+.contract-table__chevron--lead::after {
+  content: "›";
+  font-weight: 700;
+}
+
+.contract-table__chevron--open.contract-table__chevron--lead::after {
+  transform: rotate(90deg);
+}
+
+.contract-type-badge {
+  display: inline-block;
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.contract-type-badge--quant {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.contract-type-badge--qual {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.contract-type-badge--inno {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* 경영계약 성과지표 — 세부과제 섹션(제목 밖 + 탭만 박스) */
+.contract-subtasks {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.contract-subtabs {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 1rem;
+  padding: 0;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.contract-subtasks .contract-subtabs {
+  margin-bottom: 0;
+}
+
+.contract-subtabs__heading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 0 0 0.45rem;
+  padding: 0;
+}
+
+.contract-subtabs__bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: #e8eef5;
+}
+
+.contract-subtabs__tab {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0%;
+  gap: 0.45rem;
+  padding: 0.55rem 0.6rem 0.65rem;
+  margin-bottom: -1px;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 3px solid transparent;
+  background: rgba(255, 255, 255, 0.35);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  box-shadow: none;
+}
+
+.contract-subtabs__tab:last-child {
+  border-right: none;
+}
+
+.contract-subtabs__tab:hover {
+  background: rgba(255, 255, 255, 0.65);
+  border-bottom-color: rgba(30, 58, 138, 0.35);
+}
+
+.contract-subtabs__tab:hover .contract-subtabs__tab-text {
+  color: #111827;
+}
+
+.contract-subtabs__tab.is-active {
+  background: #fff;
+  border-bottom-color: #1e3a8a;
+}
+
+.contract-subtabs__tab:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.contract-subtabs__tab.is-active .contract-subtabs__tab-text {
+  font-weight: 700;
+  color: #111827;
+}
+
+.contract-subtabs__tab:not(.is-active) .contract-subtabs__tab-text {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.contract-subtabs__tab-badge {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.contract-subtabs__tab.is-active .contract-subtabs__tab-badge {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.contract-subtabs__tab-text {
+  font-size: 0.875rem;
+  line-height: 1.35;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 3.25rem);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contract-detail-row td.contract-detail-cell {
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.contract-table tbody tr:last-child.contract-detail-row td {
+  border-bottom: none;
+}
+
+.contract-det-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.28s ease;
+}
+
+.contract-det-wrap--open {
+  max-height: 4000px;
+}
+
+.contract-det-inner {
+  padding: 1rem 1.25rem 1.35rem;
+  background: #f8fafc;
+  border-top: 1px solid var(--border);
+}
+
+.contract-det-section {
+  margin-bottom: 1rem;
+}
+
+.contract-det-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.contract-det-section--header {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.contract-det-header-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: flex-end;
+}
+
+.contract-det-field {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.contract-det-field--narrow {
+  flex: 0 0 auto;
+  min-width: 5rem;
+}
+
+.contract-det-label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.contract-det-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.contract-det-slabel {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.45rem;
+}
+
+.contract-goal-mini {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.contract-goal-mini th,
+.contract-goal-mini td {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.6rem;
+  text-align: center;
+}
+
+.contract-goal-mini th {
+  background: #fafbfc;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.contract-goal-mini__cur {
+  background: #e0f2fe;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.contract-det-placeholder {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.contract-det-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ----- 관리자: 경영계약 지표 ----- */
+.admin-ind-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-save-status {
+  font-size: 0.85rem;
+  color: #059669;
+  min-height: 1em;
+}
+
+/* goal blocks */
+.admin-goal-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+  background: #fafbfc;
+  overflow: hidden;
+}
+
+.admin-goal-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.75rem;
+  padding: 0.8rem 1rem;
+  background: #f0f4fa;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-goal-title-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.admin-goal-del {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.admin-goal-ind-list {
+  padding: 0.5rem 1rem 0;
+}
+
+/* indicator item row */
+.admin-ind-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.admin-ind-item:last-child {
+  border-bottom: none;
+}
+
+.admin-ind-item__info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.7rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-ind-item__name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.admin-ind-item__dept {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.admin-ind-item__btns {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.admin-ind-item__btns .btn {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+}
+
+/* indicator add/edit form */
+.admin-ind-form {
+  border: 1px solid #bfdbfe;
+  border-radius: 3px;
+  padding: 1rem;
+  margin: 0.6rem 0;
+  background: #eff6ff;
+}
+
+.admin-ind-form--edit {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.admin-ind-form-field {
+  margin-bottom: 0.6rem;
+}
+
+.admin-ind-form-field--unit {
+  margin-bottom: 0.6rem;
+}
+
+.admin-ind-form-field--inno label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.admin-ind-form-type-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-type-btn {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.admin-type-btn--active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.admin-ind-form-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.admin-ind-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #bfdbfe;
+}
+
+.admin-goal-add-ind {
+  display: block;
+  margin: 0.75rem 1rem 0.85rem;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.7rem;
+}
+
+.admin-ind-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.85rem;
+  background: #fafbfc;
+}
+
+.admin-ind-field {
+  margin-bottom: 0.65rem;
+}
+
+.admin-ind-field:last-child {
+  margin-bottom: 0;
+}
+
+.admin-ind-field--check {
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem;
+}
+
+.admin-ind-field--check label {
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-ind-field--actions {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+}
+
+.admin-ind-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.admin-ind-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+}
+
+.admin-ind-field--actions {
+  grid-column: 1 / -1;
+}
+
+/* ----- 기타 주요 활동 ----- */
+.page--activities {
+  gap: 0;
+}
+
+.activities-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.activities-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+/* ----- 공통 아이콘 (휴지통) ----- */
+.icon-trash {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  pointer-events: none;
+  color: inherit;
+  flex-shrink: 0;
+}
+.icon-trash path,
+.icon-trash polyline {
+  stroke: currentColor;
+}
+
+/* 아이콘 전용 버튼 — 정사각 형태, 작은 크기 */
+.btn--icon {
+  padding: 0.35rem;
+  width: 2rem;
+  height: 2rem;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn--icon .icon-trash {
+  width: 1.05rem;
+  height: 1.05rem;
+  vertical-align: middle;
+}
+
+.btn {
+      font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.4em 1rem;
+    border-radius: 3px;
+    border: 1px solid #d9d9d9;
+    cursor: pointer;
+    line-height: 1.35;
+}
+
+.btn--primary {
+  color: #fff;
+  background: var(--accent);
+  border-color: #1d4ed8;
+}
+
+.btn--primary:hover {
+  background: #1d4ed8;
+}
+
+.btn--primary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.activities-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-panel);
+}
+
+.activities-table {
+  width: 100%;
+  min-width: 44rem;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.activities-table thead th {
+  padding: 0.7rem 0.85rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text);
+  background: #fafbfc;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.activities-table__col-narrow {
+  width: 6.5rem;
+}
+
+.activities-table__col-date {
+  width: 8.5rem;
+}
+
+/* No. \uceec\ub7fc */
+.activities-table__col-no {
+  width: 3.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+/* \uad6c\ubd84 \ud0dc\uadf8 (dash-recent__tag / all-activities__tag \uc640 \ub3d9\uc77c \ud314\ub808\ud2b8) */
+.activities-table__tag {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.activities-table__tag--leadership {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.activities-table__tag--contract {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.activities-table__tag--etc {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.activities-table tbody td {
+  padding: 0.72rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+/* 마지막 행: 래퍼(.activities-table-wrap) 하단선과 이중선이 되지 않도록 */
+.activities-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.activities-table__empty-row td {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2.75rem 1rem;
+  border-bottom: none;
+}
+
+/* ----- 활동 등록 폼 ----- */
+.page--activity-form {
+  gap: 0.75rem;
+}
+
+.form-back {
+  margin: 0;
+}
+
+.form-back__link {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.form-back__link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.activity-form-panel__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.activity-form-panel__intro {
+  margin: 0 0 1.25rem;
+}
+
+.activity-form {
+  width: 100%;
+  max-width: 100%;
+}
+
+.form-field {
+  margin-bottom: 1.15rem;
+}
+
+.form-fieldset {
+  border: none;
+  margin: 0 0 1.15rem;
+  padding: 0;
+  min-width: 0;
+}
+
+.form-fieldset--detail-performance {
+  margin-top: 0.35rem;
+}
+
+.form-fieldset__legend {
+  padding: 0;
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-fieldset__legend--primary {
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+}
+
+.form-fieldset__intro {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.detail-performance-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #fafbfc 0%, #ffffff 48%);
+  padding: 1.1rem 1.25rem 1.35rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.detail-performance__chunk {
+  margin: 0;
+}
+
+.detail-performance__subhead {
+  margin: 0 0 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.detail-performance__divider {
+  height: 1px;
+  margin: 1.15rem 0 1.1rem;
+  background: linear-gradient(90deg, transparent, var(--border) 12%, var(--border) 88%, transparent);
+}
+
+.detail-performance__row-date {
+  max-width: 16rem;
+  margin-bottom: 0.85rem;
+}
+
+.form-field--date {
+  margin-bottom: 0;
+}
+
+.form-field--flush {
+  margin-bottom: 1rem;
+}
+
+.form-field--flush:last-child {
+  margin-bottom: 0;
+}
+
+.form-textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-panel);
+  resize: vertical;
+  min-height: 8.5rem;
+}
+
+.form-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.form-textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.form-input--date {
+  max-width: 100%;
+}
+
+.form-input--date {
+  max-width: 14rem;
+}
+
+.evidence-dropzone {
+  position: relative;
+  margin-top: 0.45rem;
+  border: 2px dashed #c4cad4;
+  border-radius: 3px;
+  background: #f9fafb;
+  min-height: 6.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem 1.25rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.evidence-dropzone:hover {
+  border-color: #94a3b8;
+  background: #f3f4f6;
+}
+
+.evidence-dropzone:focus-within {
+  border-color: var(--accent);
+  background: #eff6ff;
+  outline: 2px solid rgba(37, 99, 235, 0.25);
+  outline-offset: 2px;
+}
+
+.evidence-dropzone__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.evidence-dropzone__content {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 22rem;
+}
+
+.evidence-dropzone__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.evidence-dropzone__hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.form-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.activity-type-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.25rem;
+  align-items: start;
+}
+
+
+.form-field--inline {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.form-field--secondary-checkboxes .activity-type-checkboxes {
+  width: 100%;
+}
+
+.activity-type-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-panel);
+}
+
+.activity-type-checkboxes--empty {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.activity-type-checkboxes--error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2);
+}
+
+.activity-type-checkboxes__placeholder {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.activity-type-checkboxes__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.activity-type-checkboxes__item input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--accent, #2563eb);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-label__req {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  max-width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-panel);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.form-input:focus-visible,
+.form-select:focus-visible {
+  outline: none;
+}
+
+.form-select {
+  cursor: pointer;
+  padding-right: 2rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.btn--secondary {
+  color: var(--text);
+  background: var(--bg-panel);
+  border-color: var(--border);
+}
+
+.btn--secondary:hover {
+  background: #f3f4f6;
+}
+
+/* =============================================
+   경영계약 — 테이블 관리자 버튼 / 빈 상태
+   ============================================= */
+.contract-table__empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.contract-table__add-goal-row td {
+  padding: 0.6rem 1rem;
+  border-top: 1px dashed var(--border);
+}
+
+.contract-table__empty-cell {
+  color: var(--text-muted);
+}
+
+/* 성과목표 셀: 제목 + 휴지통 + "성과지표 추가" 버튼을 한 줄 중앙 정렬로 */
+.contract-table__goal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: center;
+}
+
+.contract-table__goal-title {
+  flex: 0 1 auto;
+  line-height: 1.45;
+  word-break: keep-all;
+  text-align: center;
+}
+
+.contract-table__add-goal-btn {
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+}
+
+/* 공통: 목표 셀 안의 아이콘 버튼 (삭제/추가) */
+.contract-table__del-goal,
+.contract-table__del-ind,
+.contract-table__edit-ind,
+.contract-table__add-ind-icon {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  color: #6b7280;
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  cursor: pointer;
+}
+
+.contract-table__del-goal .icon-trash,
+.contract-table__del-ind .icon-trash {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.contract-table__add-ind-icon svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.contract-table__edit-ind svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.contract-table__del-goal:hover,
+.contract-table__del-ind:hover,
+.contract-table__edit-ind:hover,
+.contract-table__add-ind-icon:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.contract-table__del-ind {
+  margin-left: 0.35rem;
+}
+
+.contract-table__edit-ind {
+  margin-left: 0.4rem;
+}
+
+/* =============================================
+   모달 (cp-modal)
+   ============================================= */
+.cp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cp-modal[hidden] {
+  display: none;
+}
+
+.cp-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.cp-modal__box {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 3px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+  width: min(480px, 92vw);
+  max-height: 90vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cp-modal-scale-in 0.18s ease-out;
+}
+
+@keyframes cp-modal-scale-in {
+  from { transform: translateY(8px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0)   scale(1);    opacity: 1; }
+}
+
+.cp-modal__box--wide {
+  width: min(680px, 94vw);
+}
+
+/* 파란 그라디언트 헤더 — 향후일정 작성 모달(.lead-modal__head)과 동일한 톤 */
+.cp-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  background: linear-gradient(90deg, #1e3a5f 0%, #2563eb 100%);
+  color: #fff;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.cp-modal__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.cp-modal__x {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  transition: background 0.12s;
+}
+
+.cp-modal__x:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.cp-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.4rem;
+  overflow-y: auto;
+}
+
+.cp-modal__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.cp-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 120px;
+}
+
+.cp-modal__field--grow {
+  flex: 2 1 200px;
+}
+
+.cp-modal__field--narrow {
+  flex: 1 1 120px;
+  max-width: 180px;
+}
+
+.cp-modal__field--accent .cp-modal__label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cp-modal__field--accent .cp-modal__input {
+  border-color: var(--accent);
+}
+
+.cp-modal__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.cp-modal__input,
+.cp-modal__select {
+  height: 2.35rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cp-modal__input:focus,
+.cp-modal__select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.cp-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 0.85rem 1.4rem;
+  border-top: 1px solid var(--border);
+  background: #fafbfc;
+  flex: 0 0 auto;
+}
+
+/* =============================================
+   성과지표 추가/수정 모달 (mi-modal)
+   ============================================= */
+.mi-modal.cp-modal__box--wide {
+  width: min(920px, 96vw);
+}
+
+.mi-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* 상단 카드 — 기본은 세로: 지표명(넓게) → 유형·부서 */
+.mi-card {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 1rem;
+  background: #f8f9fb;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--mi-field-radius);
+  padding: 1.1rem 1.2rem;
+  font-family: var(--font);
+}
+
+.mi-card__name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.mi-card__aside {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  align-items: center;
+  flex: none;
+  width: 100%;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+/* 유형 + 담당부서 2칸: flex 로는 두 번째 줄이 flex-grow 하며
+   "비계량" 과 "담당부서" 사이에 과도한 빈 칸이 생길 수 있어 grid 로 정렬 */
+.mi-card__aside:has(> :nth-child(2)) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem 0.85rem;
+  align-items: center;
+}
+
+@media (max-width: 560px) {
+  .mi-card__aside:has(> :nth-child(2)) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mi-card__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.mi-card__input,
+.mi-card__select {
+  min-height: 2.65rem;
+  height: auto;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--mi-field-radius);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* div 로 쓰는 읽기전용 칸(상위 지표명 등): 본문 세로 중앙 */
+.mi-card__input.contract-ind-parent-summary__name-readonly,
+.mi-card__input.contract-ind-parent-summary__dept-readonly {
+  display: flex;
+  align-items: center;
+}
+
+.mi-card__input:focus,
+.mi-card__select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.mi-field-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+/* 성과지표명: 모달에서 한 줄로 길게 */
+.mi-card__input--indicator-name {
+  width: 100%;
+  max-width: none;
+}
+
+/* 담당부서: 고정 폭(상세 등) */
+.mi-card__input--dept {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+}
+
+/* 2행: 담당부서 칸이 남는 가로 확장 (grid 2열 레이아웃일 땐 별도 규칙이 덮음) */
+.mi-card__aside .mi-field-inline:has(.mi-card__input--dept) {
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 100%;
+}
+
+.mi-card__aside:has(> :nth-child(2)) .mi-field-inline:has(.mi-card__input--dept) {
+  flex: unset;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.mi-card__aside .mi-card__input--dept {
+  width: 100%;
+  min-width: 180px;
+  max-width: 300px;
+  flex: 1 1 auto;
+}
+
+/* 성과지표 추가 모달 — 세부과제(하위 메뉴) */
+.mi-section + .mi-subtasks-option {
+  margin-top: 1rem;
+}
+
+.mi-subtasks-option {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.mi-subtasks-option__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.mi-subtasks-option__cb {
+  margin-top: 0.2em;
+  flex-shrink: 0;
+}
+
+.mi-subtasks-panel {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  background: #fff;
+}
+
+.mi-subtasks-panel__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mi-subtasks-panel__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.mi-subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+.mi-subtask-row {
+  position: relative;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  background: #fafbfc;
+}
+
+.mi-subtask-row__del {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.mi-subtask-row__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  padding-right: 5.5rem;
+}
+
+@media (max-width: 720px) {
+  .mi-subtask-row__grid {
+    padding-right: 0;
+    padding-top: 1.75rem;
+  }
+}
+
+.mi-subtask-row__grid .mi-st-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.mi-subtask-row__grid .mi-st-field label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mi-subtask-row__grid .mi-st-field__span-lab {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+/* 세부과제명: 한 줄 전체 너비 */
+.mi-subtask-row__grid .mi-st-field--name-row label,
+.mi-subtask-row__grid .mi-st-field--name-row {
+  width: 100%;
+  min-width: 0;
+}
+
+.mi-subtask-row__grid .mi-st-field--name-row input.mi-st-name {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.mi-subtask-row__grid .mi-st-field input {
+  height: 2.1rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+
+/* 세부과제 유형: 입력 필드 전용 스타일이 버튼에 닿지 않도록 + 상단 지표와 동일 토글 크기 */
+.mi-subtask-row__grid .mi-type-group {
+  align-self: flex-start;
+}
+
+.mi-subtask-row__grid .mi-type-btn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.72rem;
+  min-width: 3.75rem;
+  min-height: 0;
+  line-height: 1.25;
+}
+
+/* 세부과제 카드 안 연도별 목표 — 본문(.mi-modal)의 연도별 블록과 동일 마크업·톤 */
+.mi-subtask-row .mi-targets--nested {
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.mi-subtask-row .mi-targets--nested .mi-targets__group--main {
+  flex: 3 1 280px;
+  min-width: 0;
+}
+
+.mi-subtask-row .mi-targets--nested .mi-targets__group--forecast {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.mi-subtasks-add-btn {
+  font-size: 0.82rem;
+}
+
+/* 연도별 성과목표치 섹션 */
+.mi-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.mi-section__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mi-targets {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.mi-targets__group {
+  display: grid;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.mi-targets__group--main {
+  flex: 3 1 0;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.mi-targets__group--forecast {
+  flex: 1 1 0;
+  grid-template-columns: 1fr;
+}
+
+.mi-targets__col {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+}
+
+.mi-targets__group > .mi-targets__col:last-child {
+  border-right: 0;
+}
+
+.mi-targets__col--forecast {
+  border-left: 0;
+}
+
+.mi-targets__head {
+  padding: 0.7rem 0.5rem;
+  background: #f4f6f9;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+
+.mi-targets__input {
+  height: 2.6rem;
+  border: 0;
+  padding: 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mi-targets__input:focus {
+  background: #f0fdf4;
+}
+
+.mi-targets__input::placeholder {
+  color: #9ca3af;
+}
+
+.mi-targets__col--accent .mi-targets__head {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.mi-targets__col--accent .mi-targets__input {
+  background: #f0f9ff;
+  color: #0c4a6e;
+  font-weight: 600;
+}
+
+.mi-targets__col--accent .mi-targets__input:focus {
+  background: #e0f2fe;
+}
+
+/* ───────────────────────────────────────────────────
+   월별 계획 / 실적 표 (계량·비계량 공통)
+   연도별 성과목표치(.mi-targets) 바로 아래에 붙으며,
+   스타일은 `mi-targets` 와 톤을 맞추되
+   12열 그리드에서 셀이 너무 좁아 보이지 않도록 타이트한
+   폰트/패딩을 사용.
+   ─────────────────────────────────────────────────── */
+.mi-months {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mi-months[hidden] {
+  display: none;
+}
+
+.mi-months__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mi-months__title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mi-months__legend {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.mi-months__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mi-months__legend-item input[type="checkbox"] {
+  accent-color: #0369a1;
+  margin: 0;
+}
+
+/* 표 바깥쪽 모서리에 둥근 테두리 + 균일한 1px 라인을 유지하기 위해
+   `border-collapse: separate` + 모든 셀 상·우 보더 + 테이블 좌·상단 보더
+   조합을 사용한다. (`border-collapse: collapse` 는 border-radius 와
+   호환성이 떨어져 모서리가 사각형으로 보이기 때문) */
+.mi-months__tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #fff;
+  table-layout: fixed;
+}
+
+.mi-months__tbl thead th,
+.mi-months__tbl tbody th,
+.mi-months__tbl tbody td {
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  box-sizing: border-box;
+}
+
+/* 각 행의 마지막 셀은 바깥 테두리와 겹치므로 우측 보더 제거 */
+.mi-months__tbl thead th:last-child,
+.mi-months__tbl tbody tr > *:last-child {
+  border-right: 0;
+}
+
+/* 마지막 행(실적)의 아래 보더는 테이블 바깥 보더로 대체 */
+.mi-months__tbl tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.mi-months__tbl thead th {
+  padding: 0.5rem 0.25rem;
+  background: #f4f6f9;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.mi-months__corner {
+  background: #eef2f7 !important;
+}
+
+.mi-months__row-label {
+  width: 4.25rem;
+  padding: 0.5rem 0.35rem;
+  background: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.mi-months__cell {
+  padding: 0;
+}
+
+.mi-months__input {
+  width: 100%;
+  height: 2.1rem;
+  border: 0;
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.mi-months__input:focus {
+  background: #f0fdf4;
+}
+
+.mi-months__input::placeholder {
+  color: #cbd5e1;
+  font-size: 0.75rem;
+}
+
+/* 실적 행은 시각적으로 다른 톤을 주어 '예상(계획)' vs '결과(실적)' 를
+   구분할 수 있도록 한다. */
+.mi-months__row--result .mi-months__row-label {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.mi-months__row--result .mi-months__input:focus {
+  background: #ecfdf5;
+}
+
+/* 성과지표 상세 — 상위 지표(세부과제 있음): 흰 래퍼 + 내부 회색 .mi-card(하위 없음과 동일 구조) */
+.contract-ind-parent-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--mi-field-radius);
+  box-sizing: border-box;
+  padding: 1.25rem 1.35rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.contract-ind-parent-wrap > .mi-card {
+  margin: 0;
+}
+
+.contract-ind-parent-summary__name-readonly,
+.contract-ind-parent-summary__dept-readonly {
+  cursor: default;
+  pointer-events: none;
+  user-select: text;
+}
+
+.contract-ind-parent-wrap .contract-ind-parent-summary__type-readonly .mi-type-btn[disabled],
+.contract-ind-parent-wrap .contract-ind-parent-summary__type-readonly .mi-type-btn:disabled {
+  opacity: 1;
+  cursor: default;
+  pointer-events: none;
+}
+
+.contract-ind-parent-wrap .contract-ind-parent-summary__type-readonly .mi-type-btn:not(.is-active):disabled {
+  background: #fff;
+  color: #374151;
+}
+
+.contract-ind-parent-wrap .contract-ind-parent-summary__type-readonly .mi-type-btn.is-active:disabled {
+  background: var(--accent);
+  color: #fff;
+}
+
+.contract-ind-parent-summary__targets-title {
+  margin: 0;
+}
+
+.mi-targets__display {
+  flex: 1 1 auto;
+  min-height: 2.6rem;
+  padding: 0 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  background: #fff;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.mi-targets__col--accent .mi-targets__display {
+  background: #f0f9ff;
+  color: #0c4a6e;
+  font-weight: 600;
+}
+
+/* 성과지표 상세 페이지 (contract-indicator.html) */
+.page--contract-indicator {
+  padding: 1.25rem 1.75rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  --contract-indicator-section-gap: 1rem;
+  gap: var(--contract-indicator-section-gap);
+}
+
+/* 세부과제 탭 블록과 바로 아래 폼 패널을 한 덩어리 카드처럼 연결 */
+.page--contract-indicator .contract-subtabs {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.page--contract-indicator .contract-subtasks + .lead-task-panel {
+  margin-top: calc(-1 * var(--contract-indicator-section-gap));
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--card-shadow);
+}
+
+.mi-page {
+  background: #fff;
+  padding: 1.5rem 1.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mi-page .mi-card {
+  background: #f8f9fb;
+}
+
+.mi-page__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 1rem 0 1.5rem;
+}
+
+/* 목표 달성계획 아코디언 — 리더십 중점과제(.lead-block) 카드와 동일한 톤 */
+.plans-section {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.plans-section > .mi-section__title {
+  margin: 0;
+  padding: 0.85rem 1.25rem;
+  background: #fafbfc;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.plans-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0;
+}
+
+.plans-accordion:empty {
+  display: none;
+}
+
+.plans-item {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.plans-accordion > .plans-item:last-child {
+  border-bottom: none;
+}
+
+.plans-item--open {
+  background: transparent;
+}
+
+.plans-item__header {
+  background: transparent;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.4rem 1.25rem;
+  color: var(--text);
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.plans-item__header:hover {
+  background: transparent;
+}
+
+.plans-item--open .plans-item__header {
+  background: #f3f4f6;
+}
+
+.plans-item__toggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 3px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.plans-item__toggle:hover,
+.plans-item__toggle:focus-visible {
+  background: transparent;
+  outline: none;
+}
+
+.plans-item--open .plans-item__toggle:hover,
+.plans-item--open .plans-item__toggle:focus-visible {
+  background: transparent;
+}
+
+.plans-item__num {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-right: 0.75rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.plans-item__title {
+  flex: 0 1 auto;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.plans-item__act-count {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.35rem 0 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  /* 우측 그룹(활동내역 배지·"+ 활동실적"·chev) 의 시작점이 되어
+     리더십 task-row 처럼 오른쪽 끝으로 정렬되도록 한다. */
+  margin-left: auto;
+  cursor: pointer;
+  height: 30px;
+}
+
+/* 활동내역이 0 건이어서 actCount 가 숨겨진 경우, 다음 형제인
+   "+ 활동실적" 버튼이 margin-left: auto 를 물려받아 우측 정렬되게 한다. */
+.plans-item__act-count[hidden] ~ .plans-item__act-add {
+  margin-left: auto;
+}
+
+/* 달성계획 행에서 바로 "+ 활동실적" 을 등록하는 버튼 */
+.plans-item__act-add {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.9rem;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--primary, #2563eb);
+  background: var(--primary, #2563eb);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.plans-item__act-add:hover,
+.plans-item__act-add:focus-visible {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.plans-item__act-count:hover,
+.plans-item__act-count:focus,
+.plans-item__act-count:focus-visible,
+.plans-item__act-count:active {
+  background: #fff;
+  color: #111827;
+  border-color: #e5e7eb;
+  outline: none;
+  box-shadow: none;
+}
+
+.plans-item__act-count-label {
+  display: inline-block;
+}
+
+.plans-item__act-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.38rem;
+  border-radius: 999px;
+  background: #dc1b4d;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.plans-item__act-count[hidden] {
+  display: none;
+}
+
+.plans-item__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+
+.plans-item__del {
+  appearance: none;
+  padding: 0;
+  margin: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  color: #6b7280;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.plans-item__del:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.plans-item__del .icon-trash {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.plans-item__chev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+/* 리더십 .task-row__chevron::before 와 동일한 방식/두께로 화살표를 그린다. */
+.plans-item__chev::before {
+  content: "›";
+  font-weight: 700;
+}
+
+.plans-item__body {
+  background: #fff;
+  margin:15px
+}
+
+.plans-item__body[hidden] {
+  display: none;
+}
+
+.plans-item__body .plan-detail {
+  background: #fff;
+  padding: 0;
+}
+
+.plans-item__body .lead-detail__form {
+  margin: 0;
+}
+
+/* 달성계획별 액션바: 좌측 [+ 활동실적] · 우측 [저장] 으로 배치.
+   .plan-detail__act-add 에 margin-right: auto 를 주어 좌측 끝에 고정한다. */
+.plan-detail__actions {
+  margin: 0.75rem 0 0.5rem;
+  padding: 0.75rem 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.plan-detail__act-add {
+  margin-right: auto;
+}
+
+/* 시각 스타일은 .btn .btn--keytask-add 가 담당하고, 여기서는
+   "달성계획 추가" 버튼의 배치(우측 정렬 / 카드 바깥 위치)만 담당한다. */
+.plans-add-btn {
+  align-self: flex-end;
+  display: inline-block;
+  width: auto;
+  /* 섹션과의 간격은 부모의 gap(1.25rem) 으로 제어되므로 자체 margin 은 최소화 */
+  margin: -0.4rem 0 0;
+}
+
+/* 활동실적 목록 요약 (모달 트리거 행) */
+.plan-act-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.2rem;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.plan-act-summary__empty {
+  color: #9ca3af;
+}
+
+.plan-act-summary__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.plan-act-summary__preview {
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.lead-modal.plan-act-list-modal {
+  width: 70vw;
+  max-width: 70vw;
+}
+
+.plan-act-list-modal__body {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.plan-act-list-modal__toolbar {}
+
+.lead-detail__results-cell-no {
+  text-align: center;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+/* =============================================
+   DASHBOARD (index.html)
+   ============================================= */
+.page--dashboard {
+  padding: 1.5rem 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.dash-hero {
+  position: relative;
+  background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 50%, #ecfccb 100%);
+  border-radius: 3px;
+  padding: 2rem 2.5rem;
+  overflow: hidden;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+
+.dash-hero__content {
+  flex: 1;
+  z-index: 1;
+}
+
+.dash-hero__tag {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0d9488;
+  background: rgba(255,255,255,.65);
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  margin-bottom: 0.85rem;
+}
+
+.dash-hero__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #1e3a5f;
+  letter-spacing: -0.02em;
+}
+
+.dash-hero__title em {
+  font-style: normal;
+  color: #059669;
+}
+
+.dash-hero__title strong {
+  color: #0284c7;
+}
+
+.dash-hero__deco {
+  width: 180px;
+  height: 140px;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 70% 30%, #60a5fa 0%, transparent 50%),
+              radial-gradient(circle at 30% 70%, #a7f3d0 0%, transparent 50%);
+  border-radius: 50%;
+  opacity: 0.85;
+  margin-left: 1rem;
+}
+
+/* 3 summary cards */
+.dash-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.dash-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1.25rem 1.4rem;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.dash-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  transform: translateY(-2px);
+}
+
+.dash-card__icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.dash-card--leadership .dash-card__icon {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.dash-card--contract .dash-card__icon {
+  background: #dcfce7;
+  color: #059669;
+}
+
+.dash-card--activity .dash-card__icon {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.dash-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-card__label {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0 0 0.3rem;
+  line-height: 1.35;
+}
+
+.dash-card__value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.dash-card__unit {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 0.2rem;
+}
+
+/* "N / 12건" 표기에서 '/' 구분자와 분모 스타일 */
+.dash-card__unit--sep {
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0 0.15rem;
+}
+
+.dash-card__value--total {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+}
+
+/* "(중점과제수)", "(달성계획수)" 같은 보조 설명 */
+.dash-card__hint {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 0.35rem;
+  letter-spacing: 0;
+}
+
+.dash-card__arrow {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* recent activity panel */
+.dash-recent {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1.25rem 1.4rem 1.35rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.dash-recent__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.dash-recent__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.dash-recent__title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 1rem;
+  background: #1e4976;
+  border-radius: 3px;
+}
+
+.dash-recent__more {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.dash-recent__more:hover {
+  color: #1e4976;
+}
+
+.dash-recent__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.dash-recent__table th,
+.dash-recent__table td {
+  padding: 0.7rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dash-recent__table thead th {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-recent__tag {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 기관장 활동내역 페이지의 all-activities__tag 팔레트와 동일하게 유지 */
+.dash-recent__tag--leadership {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.dash-recent__tag--contract {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.dash-recent__tag--activity {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.dash-recent__date {
+  color: var(--text-muted);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.dash-recent__no {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   기타 주요 활동 — 활동 등록 페이지 (activity-register.html)
+   ========================================================================== */
+
+/* 탭 바 */
+.act-reg__tabs {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0 0 0.85rem;
+  flex-wrap: wrap;
+}
+
+.act-reg__tab {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.act-reg__tab:hover {
+  background: #f3f4f6;
+}
+
+.act-reg__tab.is-active {
+  background: #fff;
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.act-reg__tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 활동실적 목록 카드 */
+.act-reg__list {
+  background: #f5f7fb;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.act-reg__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.act-reg__list-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.act-reg__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  font-size: 0.88rem;
+}
+
+.act-reg__table thead th {
+  padding: 0.5rem 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.act-reg__table tbody td {
+  padding: 0.6rem 0.65rem;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+  color: var(--text);
+}
+
+.act-reg__row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.act-reg__row:hover {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.act-reg__row.is-editing {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.act-reg__empty-row td {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1.75rem 1rem;
+}
+
+/* 폼 패널 */
+.act-reg__form {
+  background: #fafbfc;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1.1rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.act-reg__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.act-reg__label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.act-reg__req {
+  color: #dc2626;
+  margin-left: 0.15rem;
+}
+
+.act-reg__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.act-reg__select {
+  padding-right: 2rem;
+}
+
+.act-reg__indicator-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.act-reg__indicator-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.45rem 0.55rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.act-reg__indicator-tags:empty::before {
+  content: "연관지표를 골라 추가하세요.";
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.act-reg__indicator-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  padding: 0.2rem 0.35rem 0.2rem 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1e3a5f;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+}
+
+.act-reg__indicator-tag__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.act-reg__indicator-tag-remove {
+  appearance: none;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  margin: 0 -0.08rem 0 0;
+  border: none;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #64748b;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.act-reg__indicator-tag-remove:hover,
+.act-reg__indicator-tag-remove:focus-visible {
+  color: #b91c1c;
+  background: #fef2f2;
+  outline: none;
+}
+
+/* 활동유형 5열 그리드 내 1차 버튼 — 상단 볼드 + 하단 소제목 2줄 */
+.act-reg__type-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  align-items: center;
+  padding: 0.4rem 0.25rem 0.45rem;
+  line-height: 1.25;
+}
+
+.act-reg__type-head-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.act-reg__type-head-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* 증빙 첨부 래퍼 */
+.act-reg__proof-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.act-reg__proof-file {
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+/* 하단 액션 바 */
+.act-reg__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.act-reg__saved {
+  margin-right: auto;
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.act-reg__del-btn {
+  margin-right: auto;
+}
+
+.act-reg__saved:empty + .act-reg__del-btn[hidden] ~ .btn {
+  /* no-op — placeholder for future layout shifts */
+}
+
+/* =============================================
+   뷰 / 수정 모드 — 활동실적 모달 내부 전용
+   - 리스트에서 기존 레코드를 클릭해 모달을 열면 '뷰모드'로 시작하고
+     모달 하단의 [수정] 버튼을 누르면 수정 모드로 전환.
+   - 모달 루트(.lead-modal)에 .is-view-mode 클래스를 토글하여 제어.
+   ============================================= */
+
+/* 뷰모드: 입력 컨트롤을 '보여주기만 하는' 텍스트 형태로 */
+.is-view-mode input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.is-view-mode textarea,
+.is-view-mode select {
+  background: #f8fafc !important;
+  border-color: #e5e7eb !important;
+  box-shadow: none !important;
+  color: #1f2937 !important;
+  cursor: default !important;
+  pointer-events: none;
+}
+.is-view-mode input::placeholder,
+.is-view-mode textarea::placeholder {
+  color: transparent !important;
+}
+.is-view-mode input[type="file"],
+.is-view-mode .lead-act-modal__proof-file {
+  display: none !important;
+}
+
+/* 체크박스/라디오는 기본 모양 유지하되 클릭만 차단 */
+.is-view-mode input[type="checkbox"],
+.is-view-mode input[type="radio"] {
+  pointer-events: none;
+}
+
+/* 활동유형 그리드(1차 버튼 포함)는 뷰모드에서 전체 클릭 차단 */
+.is-view-mode .lead-act-modal__type-grid {
+  pointer-events: none;
+}
+
+/* 뷰/수정 모드 버튼 가시성
+   data-mode-show="view" — 뷰모드에서만 표시 (예: [닫기], [수정])
+   data-mode-show="edit" — 수정모드에서만 표시 (예: [취소], [저장], [삭제]) */
+[data-mode-show="view"] { display: none !important; }
+.is-view-mode [data-mode-show="view"] { display: inline-flex !important; }
+.is-view-mode [data-mode-show="edit"] { display: none !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   기관장 활동내역 페이지 (all-activities.html)
+   ══════════════════════════════════════════════════════════════ */
+.all-activities__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 1rem;
+}
+
+.all-activities__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.all-activities__filter {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.all-activities__filter-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  border: none;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1.4;
+}
+
+.all-activities__filter-btn + .all-activities__filter-btn {
+  border-left: 1px solid var(--border);
+}
+
+.all-activities__filter-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.all-activities__filter-btn:not(.is-active):hover {
+  background: #f3f4f6;
+}
+
+.all-activities__count {
+  font-size: 0.85rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* 필터 영역과 테이블 사이의 결과 건수 한 줄.
+   "총 N건" 을 좌측 정렬로 표시한다.
+   상단 마진으로 검색/필터 영역과의 시각적 간격을 확보한다. */
+.all-activities__count-row {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0.4rem 0.1rem 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.all-activities__row:hover td {
+  background-color: #f8fafc;
+}
+
+.all-activities__parent {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.all-activities__proof {
+  text-align: center;
+  color: #1f2937;
+}
+
+.all-activities__proof .icon-proof,
+.activities-table__proof-cell .icon-proof {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.activities-table__proof-cell {
+  text-align: center;
+  color: #1f2937;
+}
+
+.all-activities__col-no {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+/* 기관장 활동내역 테이블 셀 정렬:
+   3번째 열(활동내용) 만 좌측 정렬을 유지하고,
+   나머지(No./구분/활동유형/활동일자/첨부) 는 가운데 정렬. */
+.all-activities__table tbody td:not(:nth-child(3)) {
+  text-align: center;
+}
+
+/* 기타 주요 활동 테이블 셀 정렬:
+   2번째 열(활동내용) 만 좌측 정렬을 유지하고,
+   나머지(No./활동유형/활동 일자/첨부) 는 가운데 정렬. */
+.activities-table:not(.all-activities__table) tbody td:not(:nth-child(2)) {
+  text-align: center;
+}
+
+/* 활동내역 테이블 — 세로 구분선
+   경영계약 성과지표 테이블처럼 열 사이에 1px 세로선을 그어
+   각 컬럼이 시각적으로 분리되어 보이도록 한다. 마지막 열은 제외.
+   ".activities-table" 클래스는 기관장 활동내역(all-activities.html)과
+   기타 주요 활동(activities.html) 두 페이지 모두에서 사용. */
+.activities-table thead th:not(:last-child),
+.activities-table tbody td:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+/* 활동유형(4번째) / 활동일자(5번째) 셀은 한 줄로 표시되도록 줄바꿈 차단 */
+.all-activities__table tbody td:nth-child(4),
+.all-activities__table tbody td:nth-child(5) {
+  white-space: nowrap;
+}
+
+.all-activities__tag {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 3px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.all-activities__tag--leadership {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.all-activities__tag--contract {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.all-activities__tag--etc {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   기관장 활동내역 — 대시보드 (요약 카드 + 차트 + 확장 필터 + 모달)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ① 요약 카드 (KPI) ─────────────────────────────── */
+.aa-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.aa-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.aa-kpi__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.aa-kpi__value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+/* 값 + 단위(건/지난달 ▲N) 를 한 줄에 가지런히 정렬.
+   숫자 baseline 에 단위가 맞도록 align-items: baseline. */
+.aa-kpi__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.aa-kpi__value small {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 0.15rem;
+}
+
+.aa-kpi__value--date {
+  font-size: 1.15rem;
+}
+
+.aa-kpi__unit {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.aa-kpi__unit--up { color: #15803d; }
+.aa-kpi__unit--down { color: #b91c1c; }
+
+/* ②③ 차트 영역 ──────────────────────────────────── */
+.aa-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.aa-chart-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.9rem 1rem 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  /* 도넛 차트(11.5rem) 가 들어가도록 카드 높이 확보 */
+  min-height: 16rem;
+}
+
+.aa-chart-card__title {
+  margin: 0 0 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.aa-chart-card__title small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 0.3rem;
+}
+
+.aa-chart-card__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* 활동유형 가로 바 차트
+   카드 본문 영역(타이틀·힌트 아래)을 모두 채우면서 바 사이 간격을 균등 분포시켜,
+   하단의 빈 여백을 줄인다. */
+.aa-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex: 1 1 auto;
+  justify-content: space-between;
+  padding: 0.25rem 0 0.1rem;
+}
+
+/* 활동유형 도넛 차트 ───────────────────────────────
+   왼쪽: SVG 도넛 (중앙 총 건수)
+   오른쪽: 색상-라벨-건수 범례
+   카드 안쪽에서 가로 중앙 정렬되도록 wrap 자체를 가운데로 모은다. */
+.aa-donut-wrap {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  min-height: 0;
+}
+
+.aa-donut {
+  position: relative;
+  flex: 0 0 auto;
+  width: 11.5rem;
+  height: 11.5rem;
+}
+
+.aa-donut__svg {
+  width: 100%;
+  height: 100%;
+  /* 12시 방향에서 시작하도록 -90도 회전 */
+  transform: rotate(-90deg);
+  display: block;
+}
+
+.aa-donut__track {
+  fill: none;
+  stroke: #f1f5f9;
+  stroke-width: 14;
+}
+
+.aa-donut__seg {
+  fill: none;
+  stroke-width: 14;
+  cursor: pointer;
+  /* 기본은 색을 살짝 밝게/덜 진하게 해서 파스텔 톤으로 노출하고,
+     특정 조각에 hover 하면 원래의 선명한 색으로 도드라지게 한다. */
+  filter: brightness(1.18) saturate(0.7);
+  transition: stroke-width 0.15s ease, opacity 0.15s ease, filter 0.2s ease;
+}
+
+.aa-donut__seg:hover,
+.aa-donut__seg.is-active,
+.aa-donut__seg.is-hovered {
+  filter: none;
+  stroke-width: 18;
+}
+
+.aa-donut__seg.is-active {
+  stroke-width: 16;
+}
+
+.aa-donut__seg.is-dim {
+  opacity: 0.35;
+}
+
+.aa-donut__seg:focus,
+.aa-donut__seg:focus-visible {
+  outline: none;
+}
+
+.aa-donut__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+
+/* 유형 필터가 걸려 있을 때만 가운데가 클릭 가능한 "전체 보기" 리셋 버튼이 된다. */
+.aa-donut__center.is-clearable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.aa-donut__center.is-clearable:hover,
+.aa-donut__center.is-clearable:focus-visible {
+  background: rgba(15, 23, 42, 0.04);
+  outline: none;
+}
+
+.aa-donut__center.is-clearable .aa-donut__center-lbl {
+  color: var(--accent, #2563eb);
+  font-weight: 700;
+}
+
+.aa-donut__center-num {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.aa-donut__center-lbl {
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.aa-donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.aa-donut-legend__item {
+  display: grid;
+  grid-template-columns: 0.7rem auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s ease, opacity 0.15s ease;
+}
+
+.aa-donut-legend__item:hover {
+  background: #f3f4f6;
+}
+
+.aa-donut-legend__item.is-active {
+  background: #eef2ff;
+  font-weight: 700;
+}
+
+.aa-donut-legend__item.is-dim {
+  opacity: 0.5;
+}
+
+.aa-donut-legend__item:focus,
+.aa-donut-legend__item:focus-visible {
+  outline: none;
+}
+
+.aa-donut-legend__sw {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  display: inline-block;
+  /* 도넛 조각과 동일한 파스텔 톤. 해당 항목 hover/활성 시 원색으로 */
+  filter: brightness(1.18) saturate(0.7);
+  transition: filter 0.2s ease;
+}
+
+.aa-donut-legend__item:hover .aa-donut-legend__sw,
+.aa-donut-legend__item.is-active .aa-donut-legend__sw,
+.aa-donut-legend__item.is-hovered .aa-donut-legend__sw {
+  filter: none;
+}
+
+.aa-donut-legend__lb {
+  white-space: nowrap;
+}
+
+.aa-donut-legend__cn {
+  margin-left: 0.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  min-width: 1.4rem;
+  text-align: right;
+}
+
+.aa-bar {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.aa-bar__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.aa-bar__track {
+  position: relative;
+  height: 0.7rem;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.aa-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+  min-width: 2px;
+}
+
+.aa-bar__count {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.aa-bar:hover .aa-bar__track {
+  background: #e2e8f0;
+}
+
+.aa-bar.is-active .aa-bar__fill {
+  background: linear-gradient(90deg, #1d4ed8, #1e40af);
+}
+
+.aa-bar:focus,
+.aa-bar:focus-visible {
+  outline: none;
+}
+
+/* 월별 스택 바 차트 — 카드 본문 영역을 채우도록 flex-grow 적용 */
+.aa-stack {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.35rem;
+  align-items: end;
+  min-height: 9rem;
+  padding-top: 0.25rem;
+  flex: 1 1 auto;
+}
+
+.aa-stack__col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.aa-stack__bar {
+  display: flex;
+  flex-direction: column-reverse;
+  height: 7rem;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #f1f5f9;
+  position: relative;
+}
+
+.aa-stack__seg {
+  width: 100%;
+  transition: opacity 0.15s;
+}
+
+.aa-stack__seg--leadership { background: #22c55e; }
+.aa-stack__seg--contract   { background: #f97316; }
+.aa-stack__seg--etc        { background: #3b82f6; }
+
+.aa-stack__col:hover .aa-stack__seg { opacity: 0.82; }
+
+.aa-stack__col.is-active .aa-stack__bar {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.aa-stack__month {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 600;
+}
+
+.aa-stack__count {
+  font-size: 0.7rem;
+  color: var(--text);
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-height: 1rem;
+}
+
+.aa-stack__col:focus,
+.aa-stack__col:focus-visible {
+  outline: none;
+}
+.aa-stack__col:focus .aa-stack__bar,
+.aa-stack__col:focus-visible .aa-stack__bar {
+  outline: none;
+}
+
+.aa-stack-legend {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.aa-stack-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.aa-stack-legend__swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.aa-stack-legend__swatch--leadership { background: #22c55e; }
+.aa-stack-legend__swatch--contract   { background: #f97316; }
+.aa-stack-legend__swatch--etc        { background: #3b82f6; }
+
+/* ④ 확장 필터 ────────────────────────────────────── */
+.aa-toolbar {
+  align-items: flex-start;
+  row-gap: 0.6rem;
+  /* 검색·필터 영역을 시각적으로 분리하는 카드형 프레임 */
+  padding: 0.85rem 1rem;
+  background: #f9fafb;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  margin-top: 2rem;
+  margin-bottom: 0;
+}
+
+.aa-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  flex: 1 1 auto;
+  margin-left: 0.75rem;
+}
+
+.aa-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.aa-filter__label {
+  font-weight: 600;
+}
+
+.aa-filter__select,
+.aa-filter__input {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text);
+  min-width: 6.5rem;
+}
+
+.aa-filter__select:focus,
+.aa-filter__input:focus {
+  outline: none;
+}
+
+.aa-filter--search {
+  flex: 1 1 13rem;
+  min-width: 13rem;
+}
+
+.aa-filter--search .aa-filter__input {
+  width: 100%;
+  min-width: 0;
+}
+
+.aa-filter-reset {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.aa-filter-reset:hover {
+  background: #f3f4f6;
+  color: var(--text);
+}
+
+/* 반응형 (좁은 폭) ────────────────────────────────── */
+@media (max-width: 1180px) {
+  .aa-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .aa-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ⑥ 활동 상세 모달 ─────────────────────────────────
+   모달 셸은 기존 .lead-modal / .lead-modal__backdrop 를 그대로 재사용하며,
+   본문 레이아웃은 활동실적 수정 모달(.lead-act-modal__*)과 동일한 폼 구조를
+   그대로 따른다. 뷰 전용임을 나타내기 위해 루트에 `is-view-mode` 가 부여되어
+   모든 input/textarea 가 회색 readonly 스타일로 렌더된다. */
+
+/* 모달 상단 메타 스트립: 구분 / 연관 지표
+   (활동실적 수정 모달에는 없는, 뷰 모달 고유의 컨텍스트 정보) */
+.aa-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.7rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+}
+
+.aa-modal-meta__row {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.aa-modal-meta__key {
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  letter-spacing: 0.01em;
+}
+
+.aa-modal-meta__val {
+  color: var(--text);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.aa-modal-meta__val.is-empty {
+  color: #9ca3af;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* 상세 정의 리스트 ─────────────────────────────────
+   라벨(dt)은 작은 배지, 값(dd)은 크고 진한 본문으로 뚜렷하게 구분.
+   행과 행 사이에는 얇은 구분선을 두어 단락 경계를 명확히 한다. */
+.aa-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+}
+
+.aa-detail__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid #eef2f6;
+}
+
+.aa-detail__row:first-child {
+  padding-top: 0.15rem;
+  border-top: 0;
+}
+
+.aa-detail__row:last-child {
+  padding-bottom: 0.15rem;
+}
+
+.aa-detail__row--grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem 1.25rem;
+}
+
+.aa-detail__row--grid2 > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.aa-detail dt {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  background: #eff6ff;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  border-radius: 3px;
+  border: 1px solid #dbeafe;
+}
+
+.aa-detail dd {
+  margin: 0;
+  padding-left: 0.1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.aa-detail dd.is-empty {
+  color: #9ca3af;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 0.88rem;
+}
+
+.aa-detail__tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.aa-detail__tag {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.aa-detail__tag--sub {
+  background: #f1f5f9;
+  color: #334155;
+}

@@ -86,4 +86,21 @@
     </bean>
     <tx:annotation-driven transaction-manager="transactionManager"/>
 
+    <!-- 서버 시작 시 DDL 자동 실행 (테이블 없을 때만, 오류 무시) -->
+    <bean id="dataSourceInitializer"
+          class="org.springframework.jdbc.datasource.init.DataSourceInitializer">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="enabled"    value="true"/>
+        <property name="databasePopulator">
+            <bean class="org.springframework.jdbc.datasource.init.ResourceDatabasePopulator">
+                <property name="continueOnError" value="true"/>
+                <property name="scripts">
+                    <list>
+                        <value>classpath:ddl/warden_ddl.sql</value>
+                    </list>
+                </property>
+            </bean>
+        </property>
+    </bean>
+
 </beans>

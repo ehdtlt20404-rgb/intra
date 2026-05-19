@@ -1,4 +1,0 @@
-service\WardenService.class
-service\impl\WardenServiceImpl.class
-controller\warden\WardenController.class
-mapper\WardenMapper.class

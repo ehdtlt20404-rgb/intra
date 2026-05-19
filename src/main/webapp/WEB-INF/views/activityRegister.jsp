@@ -7,9 +7,10 @@
         <div class="page page--activity-form">
           <section class="act-reg__form" aria-labelledby="act-reg-form-title">
             <h3 id="act-reg-form-title" class="visually-hidden">활동 실적 작성</h3>
-            <input type="hidden" id="hdActId"  value="${param.actId}">
-            <input type="hidden" id="hdCatId"  value="${param.catId}">
-            <input type="hidden" id="hdTaskId" value="${param.taskId}">
+            <input type="hidden" id="hdActId"    value="${param.actId}">
+            <input type="hidden" id="hdCatId"   value="${param.catId}">
+            <input type="hidden" id="hdTaskId"  value="${param.taskId}">
+            <input type="hidden" id="hdCategory" value="${param.category}">
 
             <div class="act-reg__field">
               <label for="act-reg-title" class="act-reg__label">활동내용명 <span class="act-reg__req">*</span></label>
@@ -174,6 +175,7 @@
       document.getElementById("act-reg-content").value     = a.content     || "";
       document.getElementById("act-reg-date").value        = a.actDate     || "";
       document.getElementById("act-reg-proof-text").value  = a.proof       || "";
+      if (a.category) document.getElementById("hdCategory").value = a.category;
       if (a.typePrimary) selectType(a.typePrimary);
       if (a.typeSecondary) {
         document.getElementById("hdTypeSecondary").value = Array.isArray(a.typeSecondary)
@@ -204,6 +206,7 @@
       content:       document.getElementById("act-reg-content").value,
       actDate:       document.getElementById("act-reg-date").value.trim(),
       proof:         document.getElementById("act-reg-proof-text").value.trim(),
+      category:      document.getElementById("hdCategory").value || "etc",
       indicators:    selectedIndicators,
       isDraft:       isDraft
     };

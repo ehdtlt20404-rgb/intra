@@ -8,7 +8,7 @@
           <section class="activities-panel" aria-labelledby="activities-heading">
             <h2 id="activities-heading" class="visually-hidden">기타 주요 활동</h2>
             <div class="activities-toolbar">
-              <a href="${pageContext.request.contextPath}/activities/register.do" class="btn btn--primary">+ 활동실적</a>
+              <a href="${pageContext.request.contextPath}/activities/register.do?category=etc" class="btn btn--primary">+ 활동실적</a>
             </div>
             <div class="activities-table-wrap">
               <table class="activities-table">

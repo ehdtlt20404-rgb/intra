@@ -186,7 +186,7 @@
   });
 
   document.getElementById("btn-act-add").addEventListener("click", function() {
-    location.href = CTX + "/activities/register.do?catId=" + encodeURIComponent(catId) + "&taskId=" + encodeURIComponent(taskId);
+    location.href = CTX + "/activities/register.do?catId=" + encodeURIComponent(catId) + "&taskId=" + encodeURIComponent(taskId) + "&category=leadership";
   });
 
   loadTaskDetail();

@@ -9,13 +9,21 @@
     ========================================================= -->
 
     <select id="selectCategoryList" resultType="map">
-        SELECT CAT_ID, TITLE, DEPT, SEQ, CREATED_AT
+        SELECT CAT_ID      AS "catId",
+               TITLE       AS "title",
+               DEPT        AS "dept",
+               SEQ         AS "seq",
+               CREATED_AT  AS "createdAt"
         FROM LS_CATEGORY
         ORDER BY SEQ, CREATED_AT
     </select>
 
     <select id="selectCategory" resultType="map">
-        SELECT CAT_ID, TITLE, DEPT, SEQ, CREATED_AT
+        SELECT CAT_ID      AS "catId",
+               TITLE       AS "title",
+               DEPT        AS "dept",
+               SEQ         AS "seq",
+               CREATED_AT  AS "createdAt"
         FROM LS_CATEGORY
         WHERE CAT_ID = #{catId}
     </select>
@@ -38,14 +46,22 @@
     ========================================================= -->
 
     <select id="selectTaskList" resultType="map">
-        SELECT TASK_ID, CAT_ID, TITLE, SEQ, CREATED_AT
+        SELECT TASK_ID     AS "taskId",
+               CAT_ID      AS "catId",
+               TITLE       AS "title",
+               SEQ         AS "seq",
+               CREATED_AT  AS "createdAt"
         FROM LS_TASK
         WHERE CAT_ID = #{catId}
         ORDER BY SEQ, CREATED_AT
     </select>
 
     <select id="selectTask" resultType="map">
-        SELECT TASK_ID, CAT_ID, TITLE, SEQ, CREATED_AT
+        SELECT TASK_ID     AS "taskId",
+               CAT_ID      AS "catId",
+               TITLE       AS "title",
+               SEQ         AS "seq",
+               CREATED_AT  AS "createdAt"
         FROM LS_TASK
         WHERE CAT_ID = #{catId}
           AND TASK_ID = #{taskId}
@@ -83,8 +99,18 @@
     </select>
 
     <select id="selectTaskDetail" resultType="map">
-        SELECT TASK_ID, KPI_NAME, SUB_ITEM, BG_ENV, BG_LEADER, DIRECTION,
-               ACT_TYPE, ACT_MAIN, ACT_DETAIL, SCHEDULE, EXPECTED, UPDATED_AT
+        SELECT TASK_ID     AS "taskId",
+               KPI_NAME    AS "kpiName",
+               SUB_ITEM    AS "subItem",
+               BG_ENV      AS "bgEnv",
+               BG_LEADER   AS "bgLeader",
+               DIRECTION   AS "direction",
+               ACT_TYPE    AS "actType",
+               ACT_MAIN    AS "actMain",
+               ACT_DETAIL  AS "actDetail",
+               SCHEDULE    AS "schedule",
+               EXPECTED    AS "expected",
+               UPDATED_AT  AS "updatedAt"
         FROM LS_TASK_DETAIL
         WHERE TASK_ID = #{taskId}
     </select>
@@ -119,7 +145,10 @@
     ========================================================= -->
 
     <select id="selectTaskMonths" resultType="map">
-        SELECT TASK_ID, MONTH_NUM, PLAN, RESULT
+        SELECT TASK_ID     AS "taskId",
+               MONTH_NUM   AS "monthNum",
+               PLAN        AS "plan",
+               RESULT      AS "result"
         FROM LS_TASK_MONTH
         WHERE TASK_ID = #{taskId}
         ORDER BY MONTH_NUM
@@ -139,13 +168,19 @@
     ========================================================= -->
 
     <select id="selectContractGoalList" resultType="map">
-        SELECT GOAL_ID, TITLE, SEQ, CREATED_AT
+        SELECT GOAL_ID     AS "goalId",
+               TITLE       AS "title",
+               SEQ         AS "seq",
+               CREATED_AT  AS "createdAt"
         FROM CT_GOAL
         ORDER BY SEQ, CREATED_AT
     </select>
 
     <select id="selectContractGoal" resultType="map">
-        SELECT GOAL_ID, TITLE, SEQ, CREATED_AT
+        SELECT GOAL_ID     AS "goalId",
+               TITLE       AS "title",
+               SEQ         AS "seq",
+               CREATED_AT  AS "createdAt"
         FROM CT_GOAL
         WHERE GOAL_ID = #{goalId}
     </select>
@@ -164,17 +199,35 @@
 
     <!-- =========================================================
          경영계약 - 성과지표 (CT_INDICATOR)
+         목록 조회 시 CT_INDICATOR_DETAIL 도 LEFT JOIN 하여
+         유형(quant) 과 목표치(t2) 를 함께 반환
     ========================================================= -->
 
     <select id="selectIndicatorList" resultType="map">
-        SELECT IND_ID, GOAL_ID, TITLE, SEQ, CREATED_AT
-        FROM CT_INDICATOR
-        WHERE GOAL_ID = #{goalId}
-        ORDER BY SEQ, CREATED_AT
+        SELECT i.IND_ID      AS "indId",
+               i.GOAL_ID     AS "goalId",
+               i.TITLE       AS "title",
+               i.SEQ         AS "seq",
+               i.CREATED_AT  AS "createdAt",
+               d.NAME        AS "name",
+               d.DEPT        AS "dept",
+               d.QUANT       AS "quant",
+               d.T1          AS "t1",
+               d.T2          AS "t2",
+               d.T3          AS "t3",
+               d.FORECAST    AS "forecast"
+        FROM CT_INDICATOR i
+        LEFT JOIN CT_INDICATOR_DETAIL d ON i.IND_ID = d.IND_ID
+        WHERE i.GOAL_ID = #{goalId}
+        ORDER BY i.SEQ, i.CREATED_AT
     </select>
 
     <select id="selectIndicator" resultType="map">
-        SELECT IND_ID, GOAL_ID, TITLE, SEQ, CREATED_AT
+        SELECT IND_ID      AS "indId",
+               GOAL_ID     AS "goalId",
+               TITLE       AS "title",
+               SEQ         AS "seq",
+               CREATED_AT  AS "createdAt"
         FROM CT_INDICATOR
         WHERE IND_ID = #{indId}
     </select>
@@ -187,6 +240,14 @@
                 (SELECT NVL(MAX(SEQ), 0) + 1 FROM CT_INDICATOR WHERE GOAL_ID = #{goalId}),
                 SYSDATE)
     </insert>
+
+    <select id="selectLastInsertedIndId" resultType="string">
+        SELECT IND_ID
+        FROM CT_INDICATOR
+        WHERE GOAL_ID = #{goalId}
+        ORDER BY CREATED_AT DESC
+        FETCH FIRST 1 ROWS ONLY
+    </select>
 
     <delete id="deleteContractIndicator">
         DELETE FROM CT_INDICATOR WHERE IND_ID = #{indId}
@@ -205,7 +266,16 @@
     </select>
 
     <select id="selectIndicatorDetail" resultType="map">
-        SELECT IND_ID, NAME, DEPT, QUANT, T1, T2, T3, FORECAST, PLAN, UPDATED_AT
+        SELECT IND_ID      AS "indId",
+               NAME        AS "name",
+               DEPT        AS "dept",
+               QUANT       AS "quant",
+               T1          AS "t1",
+               T2          AS "t2",
+               T3          AS "t3",
+               FORECAST    AS "forecast",
+               PLAN        AS "plan",
+               UPDATED_AT  AS "updatedAt"
         FROM CT_INDICATOR_DETAIL
         WHERE IND_ID = #{indId}
     </select>
@@ -241,7 +311,10 @@
     ========================================================= -->
 
     <select id="selectIndicatorMonths" resultType="map">
-        SELECT IND_ID, MONTH_NUM, PLAN, RESULT
+        SELECT IND_ID      AS "indId",
+               MONTH_NUM   AS "monthNum",
+               PLAN        AS "plan",
+               RESULT      AS "result"
         FROM CT_IND_MONTH
         WHERE IND_ID = #{indId}
         ORDER BY MONTH_NUM
@@ -261,7 +334,9 @@
     ========================================================= -->
 
     <select id="selectSubTask" resultType="map">
-        SELECT SUB_TASK_ID, IND_ID, TITLE
+        SELECT SUB_TASK_ID  AS "subTaskId",
+               IND_ID       AS "indId",
+               TITLE        AS "title"
         FROM CT_SUB_TASK
         WHERE SUB_TASK_ID = #{subTaskId}
     </select>
@@ -275,16 +350,32 @@
     ========================================================= -->
 
     <select id="selectAllActivities" resultType="map">
-        SELECT ACT_ID, CATEGORY, TITLE, TYPE_PRIMARY, TYPE_SECONDARY,
-               ACT_DATE, PROOF, STATUS, CREATED_AT, UPDATED_AT
+        SELECT ACT_ID          AS "actId",
+               CATEGORY        AS "category",
+               TITLE           AS "title",
+               TYPE_PRIMARY    AS "typePrimary",
+               TYPE_SECONDARY  AS "typeSecondary",
+               ACT_DATE        AS "actDate",
+               PROOF           AS "proof",
+               STATUS          AS "status",
+               CREATED_AT      AS "createdAt",
+               UPDATED_AT      AS "updatedAt"
         FROM ACT_MAIN
         WHERE STATUS != 'deleted'
         ORDER BY ACT_DATE DESC, CREATED_AT DESC
     </select>
 
     <select id="selectActivitiesByCategory" resultType="map">
-        SELECT ACT_ID, CATEGORY, TITLE, TYPE_PRIMARY, TYPE_SECONDARY,
-               ACT_DATE, PROOF, STATUS, CREATED_AT, UPDATED_AT
+        SELECT ACT_ID          AS "actId",
+               CATEGORY        AS "category",
+               TITLE           AS "title",
+               TYPE_PRIMARY    AS "typePrimary",
+               TYPE_SECONDARY  AS "typeSecondary",
+               ACT_DATE        AS "actDate",
+               PROOF           AS "proof",
+               STATUS          AS "status",
+               CREATED_AT      AS "createdAt",
+               UPDATED_AT      AS "updatedAt"
         FROM ACT_MAIN
         WHERE CATEGORY = #{category}
           AND STATUS != 'deleted'
@@ -292,21 +383,33 @@
     </select>
 
     <select id="selectActivity" resultType="map">
-        SELECT ACT_ID, CATEGORY, TITLE, RECOGNITION, DIRECTION,
-               TYPE_PRIMARY, TYPE_SECONDARY, CONTENT, ACT_DATE,
-               PROOF, STATUS, CREATED_AT, UPDATED_AT
+        SELECT ACT_ID          AS "actId",
+               CATEGORY        AS "category",
+               TITLE           AS "title",
+               RECOGNITION     AS "recognition",
+               DIRECTION       AS "direction",
+               TYPE_PRIMARY    AS "typePrimary",
+               TYPE_SECONDARY  AS "typeSecondary",
+               CONTENT         AS "content",
+               ACT_DATE        AS "actDate",
+               PROOF           AS "proof",
+               STATUS          AS "status",
+               CREATED_AT      AS "createdAt",
+               UPDATED_AT      AS "updatedAt"
         FROM ACT_MAIN
         WHERE ACT_ID = #{actId}
     </select>
 
     <select id="selectLeadershipOptions" resultType="map">
-        SELECT CAT_ID, TITLE
+        SELECT CAT_ID   AS "catId",
+               TITLE    AS "title"
         FROM LS_CATEGORY
         ORDER BY SEQ, CREATED_AT
     </select>
 
     <select id="selectContractOptions" resultType="map">
-        SELECT IND_ID, TITLE
+        SELECT IND_ID   AS "indId",
+               TITLE    AS "title"
         FROM CT_INDICATOR
         ORDER BY SEQ, CREATED_AT
     </select>
@@ -347,7 +450,8 @@
     ========================================================= -->
 
     <select id="selectActivityIndicators" resultType="map">
-        SELECT IND_ID AS "id", IND_LABEL AS "label"
+        SELECT IND_ID    AS "id",
+               IND_LABEL AS "label"
         FROM ACT_INDICATOR
         WHERE ACT_ID = #{actId}
     </select>

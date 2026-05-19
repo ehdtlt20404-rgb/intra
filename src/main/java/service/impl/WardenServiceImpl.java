@@ -152,7 +152,27 @@ public class WardenServiceImpl implements WardenService {
 
     @Override
     public int saveContractIndicator(Map<String, Object> param) {
-        return wardenMapper.insertContractIndicator(param);
+        // title 키 보정 (모달에서 name 으로 보낼 경우 대비)
+        if (param.get("title") == null && param.get("name") != null) {
+            param.put("title", param.get("name"));
+        }
+        wardenMapper.insertContractIndicator(param);
+        // 방금 삽입된 IND_ID 조회 후 상세 정보 저장
+        String indId = wardenMapper.selectLastInsertedIndId((String) param.get("goalId"));
+        if (indId != null) {
+            Map<String, Object> detail = new HashMap<String, Object>();
+            detail.put("indId",    indId);
+            detail.put("name",     param.get("name"));
+            detail.put("dept",     param.get("dept"));
+            detail.put("quant",    param.get("quant") != null && Boolean.TRUE.equals(param.get("quant")) ? 1 : 0);
+            detail.put("t1",       param.get("t1"));
+            detail.put("t2",       param.get("t2"));
+            detail.put("t3",       param.get("t3"));
+            detail.put("forecast", param.get("forecast"));
+            detail.put("plan",     null);
+            wardenMapper.insertIndicatorDetail(detail);
+        }
+        return 1;
     }
 
     @Override

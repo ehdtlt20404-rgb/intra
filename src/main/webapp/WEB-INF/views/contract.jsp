@@ -183,7 +183,7 @@
 
           var tdInd = document.createElement("td");
           tdInd.className = "contract-table__indicator";
-          tdInd.textContent = ind.name || "";
+          tdInd.textContent = ind.title || ind.name || "";
           tr.appendChild(tdInd);
 
           var tdType = document.createElement("td");

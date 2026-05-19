@@ -103,6 +103,9 @@ public interface WardenMapper {
     /** 성과지표 삭제 */
     int deleteContractIndicator(@Param("indId") String indId);
 
+    /** 방금 삽입한 성과지표 ID 조회 */
+    String selectLastInsertedIndId(@Param("goalId") String goalId);
+
     /** 성과목표 하위 성과지표 전체 삭제 */
     int deleteIndicatorByGoalId(@Param("goalId") String goalId);
 

@@ -2,6 +2,7 @@ package service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import mapper.WardenMapper;
 import service.WardenService;
 
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class WardenServiceImpl implements WardenService {
 
     @Autowired

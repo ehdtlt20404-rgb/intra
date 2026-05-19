@@ -99,18 +99,18 @@
     </select>
 
     <select id="selectTaskDetail" resultType="map">
-        SELECT TASK_ID     AS "taskId",
-               KPI_NAME    AS "kpiName",
-               SUB_ITEM    AS "subItem",
-               BG_ENV      AS "bgEnv",
-               BG_LEADER   AS "bgLeader",
-               DIRECTION   AS "direction",
-               ACT_TYPE    AS "actType",
-               ACT_MAIN    AS "actMain",
-               ACT_DETAIL  AS "actDetail",
-               SCHEDULE    AS "schedule",
-               EXPECTED    AS "expected",
-               UPDATED_AT  AS "updatedAt"
+        SELECT TASK_ID                              AS "taskId",
+               KPI_NAME                            AS "kpiName",
+               SUB_ITEM                            AS "subItem",
+               TO_CHAR(BG_ENV)                     AS "bgEnv",
+               TO_CHAR(BG_LEADER)                  AS "bgLeader",
+               TO_CHAR(DIRECTION)                  AS "direction",
+               ACT_TYPE                            AS "actType",
+               TO_CHAR(ACT_MAIN)                   AS "actMain",
+               TO_CHAR(ACT_DETAIL)                 AS "actDetail",
+               TO_CHAR(SCHEDULE)                   AS "schedule",
+               TO_CHAR(EXPECTED)                   AS "expected",
+               UPDATED_AT                          AS "updatedAt"
         FROM LS_TASK_DETAIL
         WHERE TASK_ID = #{taskId}
     </select>
@@ -266,16 +266,16 @@
     </select>
 
     <select id="selectIndicatorDetail" resultType="map">
-        SELECT IND_ID      AS "indId",
-               NAME        AS "name",
-               DEPT        AS "dept",
-               QUANT       AS "quant",
-               T1          AS "t1",
-               T2          AS "t2",
-               T3          AS "t3",
-               FORECAST    AS "forecast",
-               PLAN        AS "plan",
-               UPDATED_AT  AS "updatedAt"
+        SELECT IND_ID               AS "indId",
+               NAME                 AS "name",
+               DEPT                 AS "dept",
+               QUANT                AS "quant",
+               T1                   AS "t1",
+               T2                   AS "t2",
+               T3                   AS "t3",
+               FORECAST             AS "forecast",
+               TO_CHAR(PLAN)        AS "plan",
+               UPDATED_AT           AS "updatedAt"
         FROM CT_INDICATOR_DETAIL
         WHERE IND_ID = #{indId}
     </select>
@@ -383,19 +383,19 @@
     </select>
 
     <select id="selectActivity" resultType="map">
-        SELECT ACT_ID          AS "actId",
-               CATEGORY        AS "category",
-               TITLE           AS "title",
-               RECOGNITION     AS "recognition",
-               DIRECTION       AS "direction",
-               TYPE_PRIMARY    AS "typePrimary",
-               TYPE_SECONDARY  AS "typeSecondary",
-               CONTENT         AS "content",
-               ACT_DATE        AS "actDate",
-               PROOF           AS "proof",
-               STATUS          AS "status",
-               CREATED_AT      AS "createdAt",
-               UPDATED_AT      AS "updatedAt"
+        SELECT ACT_ID                       AS "actId",
+               CATEGORY                    AS "category",
+               TITLE                       AS "title",
+               TO_CHAR(RECOGNITION)        AS "recognition",
+               TO_CHAR(DIRECTION)          AS "direction",
+               TYPE_PRIMARY                AS "typePrimary",
+               TYPE_SECONDARY              AS "typeSecondary",
+               TO_CHAR(CONTENT)            AS "content",
+               ACT_DATE                    AS "actDate",
+               PROOF                       AS "proof",
+               STATUS                      AS "status",
+               CREATED_AT                  AS "createdAt",
+               UPDATED_AT                  AS "updatedAt"
         FROM ACT_MAIN
         WHERE ACT_ID = #{actId}
     </select>
